@@ -1,4 +1,4 @@
-#include "MicroBit.h"
+#include "MicroBitTouchDevelop.h"
 
 void app_main() {
   uBit.display.scroll(ManagedString("Accelerometer dump"));
