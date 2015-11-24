@@ -1,5 +1,6 @@
 #include "MicroBitTouchDevelop.h"
 #include "vec3.h"
+#include "iir_filter.h"
 
 // Types
 
