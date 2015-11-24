@@ -35,20 +35,56 @@ public:
     int currentPos;
 };
 
+
+class eventThresholdFilter
+{
+public:
+    eventThresholdFilter(float gestureThreshold, int eventCountThreshold) : gestureThreshold_(gestureThreshold), eventCountThreshold_(eventCountThreshold), count_(0) {};
+    bool filterValue(float value)
+    {
+        if(value > gestureThreshold_)
+        {
+            count_++;
+            if (count_ > eventCountThreshold_)
+            {
+                return true;
+            }
+        }
+        else
+        {
+            count_ = 0;
+        }
+        return false;
+    }
+
+private:
+    int count_ = 0;
+    float gestureThreshold_;
+    int eventCountThreshold_;
+};
+
+
 // Constants
 const int sampleRate = 6; // as fast as possible (ends up being every 6 ms)
 const int eventDisplayPeriod = 250; // ms
 
 const float gravityFilterCoeff = 0.0001; //0.0001;
-const float gestureThreshold = 0.65;
-const int eventCountThreshold = 3;
 const int minLenThresh = 25; //150*150;
 
+const float shakeGestureThreshold = 0.65;
+const int shakeEventCountThreshold = 3;
+
+eventThresholdFilter shakeEventFilter(shakeGestureThreshold, shakeEventCountThreshold);
+
+const float tapGestureThreshold = 0.65;
+const int tapEventCountThreshold = 3;
+
+const bool useMeanBuffer = true;
 const int meanBufferSize = 16;
 
 const int dotWavelength1 = 20;
-const int dotWavelength2 = 2*dotWavelength1;
-const int delayBufferSize = dotWavelength2 + meanBufferSize;
+const int dotWavelength2 = 25;
+const int delayBufferSize = 2*(dotWavelength2) + meanBufferSize;
 
 
 // Globals
@@ -65,6 +101,8 @@ float g_meanDelay2Mem[meanBufferSize];
 delayBuffer<float> g_meanDelay1(g_meanDelay1Mem, meanBufferSize);
 delayBuffer<float> g_meanDelay2(g_meanDelay2Mem, meanBufferSize);
 
+static int g_currentShakeOutputCount = 0;
+
 // Code
 byteVec3 getAccelData()
 {
@@ -73,6 +111,7 @@ byteVec3 getAccelData()
                     uBit.accelerometer.getZ()>>4);
 }
 
+// TODO: use iir_filter object here
 void filterVec(const floatVec3& vec, floatVec3& prevVec, float alpha)
 {
     prevVec.x += alpha*(vec.x - prevVec.x);
@@ -92,62 +131,54 @@ T sum(const T* buf, int len)
     return result;
 }
 
-float processSample(byteVec3 sample)
+void processSample(byteVec3 sample)
 {
-    const bool useMeanBuffer = true;
-
     filterVec(floatVec3(sample), g_gravity, gravityFilterCoeff);
     byteVec3 currentSample = byteVec3 {sample.x-g_gravity.x, sample.y-g_gravity.y, sample.z-g_gravity.z};
     g_sampleDelay.addSample(currentSample);
     
+    if(useMeanBuffer)
+    {
+        // now add val to mean buffer
+        float dot1a = dotNorm(currentSample, g_sampleDelay.getDelayedSample(dotWavelength1), minLenThresh);
+        float dot1b = dotNorm(currentSample, g_sampleDelay.getDelayedSample(2*dotWavelength1), minLenThresh);
+        if(dot1a < 0 && dot1b > 0)
+            g_meanDelay1.addSample(dot1b-dot1a);
+        else
+            g_meanDelay1.addSample(0.0); // ?
+    }
+}
+
+float getShakePrediction()
+{    
     // get mean of dot with past
     if(!useMeanBuffer)
     {
         float val = 0;
         for(int index = 0; index < meanBufferSize; index++)
         {
-            float dot1 = dotNorm(g_sampleDelay.getDelayedSample(index), g_sampleDelay.getDelayedSample(index+dotWavelength1), minLenThresh);
-            float dot2 = dotNorm(g_sampleDelay.getDelayedSample(index), g_sampleDelay.getDelayedSample(index+dotWavelength2), minLenThresh);
-            val += (dot2-dot1);
+            float dot1a = dotNorm(g_sampleDelay.getDelayedSample(index), g_sampleDelay.getDelayedSample(index+dotWavelength1), minLenThresh);
+            float dot1b = dotNorm(g_sampleDelay.getDelayedSample(index), g_sampleDelay.getDelayedSample(index+2*dotWavelength1), minLenThresh);
+            val += (dot1b-dot1a);
         }
         val /= meanBufferSize;
         return val;
     }
     else
     {
-        // now add val to mean buffer
-        float dot1 = dotNorm(currentSample, g_sampleDelay.getDelayedSample(dotWavelength1), minLenThresh);
-        float dot2 = dotNorm(currentSample, g_sampleDelay.getDelayedSample(dotWavelength2), minLenThresh);
-        g_meanDelay1.addSample(dot1);
-        g_meanDelay2.addSample(dot2);
-        
-        float sum1 = sum(g_meanDelay1Mem, meanBufferSize);
-        float sum2 = sum(g_meanDelay2Mem, meanBufferSize);
-        return (sum2-sum1) / meanBufferSize;
+        return sum(g_meanDelay1Mem, meanBufferSize) / meanBufferSize;
     }
 }
 
-bool filterDetector(float val, float gestureThreshold, int eventCountThreshold)
+float getTapPrediction()
 {
-    static int count = 0;
-    if(val > gestureThreshold)
-    {
-        count++;
-        if (count > eventCountThreshold)
-        {
-            return true;
-        }
-    }
-    else
-    {
-        count = 0;
-    }
-    return false;
+    return 0.0;
 }
 
 enum MicroBitAccelerometerEvents
     {
-        MICROBIT_ACCELEROMETER_SHAKE = 100
+        MICROBIT_ACCELEROMETER_SHAKE = 100,
+        MICROBIT_ACCELEROMETER_TAP = 101,
     };
 
 
@@ -157,12 +188,33 @@ void onShake(MicroBitEvent evt)
     // TODO: set a timer to turn off?
 }
 
-bool detectShakeGesture()
+void onTap(MicroBitEvent evt)
+{
+    uBit.display.print('T');
+}
+
+int detectGesture()
 {
     uBit.accelerometer.update();
     byteVec3 sample = getAccelData();
-    float val = processSample(sample);
-    return filterDetector(val, gestureThreshold, eventCountThreshold);
+
+    
+    processSample(sample);
+    float shakePredVal = getShakePrediction();
+    bool foundShake = shakeEventFilter.filterValue(shakePredVal);
+    if(foundShake)
+    {
+        return MICROBIT_ACCELEROMETER_SHAKE;
+    }
+
+    float tapPredVal = getTapPrediction();
+    //    bool foundTap = filterDetectorOutput(tapPredVal, tapGestureThreshold, tapEventCountThreshold);
+    //    if(foundTap)
+    //    {
+    //        return MICROBIT_ACCELEROMETER_TAP;
+    //    }
+
+    return 0;
 }
 
 /*
@@ -187,12 +239,13 @@ void accelerometer_poll()
                 uBit.display.clear();
             }
 
-            bool gotShake = detectShakeGesture();
-            if(gotShake)
+            int detectedGesture = detectGesture();
+            if(detectedGesture != 0)
             {
                 g_turnOffDisplayTime = time + eventDisplayPeriod;
+
                 // has the side-effect of dispatching the event onto the message bus
-                MicroBitEvent(MICROBIT_ID_ACCELEROMETER, MICROBIT_ACCELEROMETER_SHAKE);
+                MicroBitEvent(MICROBIT_ID_ACCELEROMETER, detectedGesture);
             }
             g_prevTime = time;
         }
@@ -211,4 +264,5 @@ void app_main()
 
     // ... and listen for them
     uBit.MessageBus.listen(MICROBIT_ID_ACCELEROMETER, MICROBIT_ACCELEROMETER_SHAKE, onShake);
+    //    uBit.MessageBus.listen(MICROBIT_ID_ACCELEROMETER, MICROBIT_ACCELEROMETER_TAP, onTap);
 }
