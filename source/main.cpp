@@ -1,68 +1,8 @@
 #include "MicroBitTouchDevelop.h"
 #include "vec3.h"
+#include "delayBuffer.h"
+#include "eventThresholdFilter.h"
 #include "iir_filter.h"
-
-// Types
-
-template <typename T>
-class delayBuffer
-{
-public:
-    delayBuffer(T* buffer, int bufLen) : buffer(buffer), bufLen(bufLen)
-    {
-        currentPos = 0;
-        for(int index = 0; index < bufLen; index++)
-        {
-            buffer[index] = T();
-        }
-    }
-
-    void addSample(T val)
-    {
-        currentPos = (currentPos+1) % bufLen;
-        buffer[currentPos] = val;
-    }
-
-    T getDelayedSample(int delay)
-    {
-        // need to ensure offset is positive
-        return buffer[(currentPos+2*bufLen-delay)%bufLen];
-    }
-
-public:
-    T* buffer;
-    int bufLen;
-    int currentPos;
-};
-
-
-class eventThresholdFilter
-{
-public:
-    eventThresholdFilter(float gestureThreshold, int eventCountThreshold) : gestureThreshold_(gestureThreshold), eventCountThreshold_(eventCountThreshold), count_(0) {};
-    bool filterValue(float value)
-    {
-        if(value > gestureThreshold_)
-        {
-            count_++;
-            if (count_ > eventCountThreshold_)
-            {
-                return true;
-            }
-        }
-        else
-        {
-            count_ = 0;
-        }
-        return false;
-    }
-
-private:
-    int count_ = 0;
-    float gestureThreshold_;
-    int eventCountThreshold_;
-};
-
 
 // Constants
 const int sampleRate = 6; // as fast as possible (ends up being every 6 ms)
@@ -100,8 +40,6 @@ float g_meanDelay1Mem[meanBufferSize];
 float g_meanDelay2Mem[meanBufferSize];
 delayBuffer<float> g_meanDelay1(g_meanDelay1Mem, meanBufferSize);
 delayBuffer<float> g_meanDelay2(g_meanDelay2Mem, meanBufferSize);
-
-static int g_currentShakeOutputCount = 0;
 
 // Code
 byteVec3 getAccelData()
@@ -146,6 +84,13 @@ void processSample(byteVec3 sample)
             g_meanDelay1.addSample(dot1b-dot1a);
         else
             g_meanDelay1.addSample(0.0); // ?
+
+        float dot2a = dotNorm(currentSample, g_sampleDelay.getDelayedSample(dotWavelength2), minLenThresh);
+        float dot2b = dotNorm(currentSample, g_sampleDelay.getDelayedSample(2*dotWavelength2), minLenThresh);
+        if(dot2a < 0 && dot2b > 0)
+            g_meanDelay2.addSample(dot2b-dot2a);
+        else
+            g_meanDelay2.addSample(0.0); // ?
     }
 }
 
