@@ -1,4 +1,5 @@
 #pragma once
+#include "fastmath.h"
 
 template <typename T>
 struct vec3
@@ -19,25 +20,42 @@ struct vec3
     }
 };
 
+// doofy accesor functions
+
+template <typename T>
+class GetX
+{
+public:
+    static T get_val(const vec3<T>& vec)
+    {
+        return vec.x;
+    }
+};
+
+template <typename T>
+class GetY
+{
+public:
+    static T get_val(const vec3<T>& vec)
+    {
+        return vec.y;
+    }
+};
+
+template <typename T>
+class GetZ
+{
+public:
+    static T get_val(const vec3<T>& vec)
+    {
+        return vec.z;
+    }
+};
+
+
 typedef vec3<int8_t> byteVec3;
 typedef vec3<short> shortVec3;
 typedef vec3<float> floatVec3;
-
-// adapted from https://en.wikipedia.org/wiki/Fast_inverse_square_root
-float fast_inv_sqrt(float val)
-{
-	const float threehalfs = 1.5F;
-
-	float x2 = val * 0.5F;
-	float y  = val;
-	long i  = * reinterpret_cast<long *>(&y);
-	i  = 0x5f3759df - ( i >> 1 );
-	y  = *reinterpret_cast<float *>(&i);
-	y  = y * ( threehalfs - ( x2 * y * y ) );
-//	y  = y * ( threehalfs - ( x2 * y * y ) );
-
-	return y;
-}
 
 template<typename T>
 float dot(const vec3<T>& a, const vec3<T>& b)

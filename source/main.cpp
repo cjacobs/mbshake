@@ -2,24 +2,26 @@
 #include "vec3.h"
 #include "delayBuffer.h"
 #include "eventThresholdFilter.h"
-#include "iir_filter.h"
+#include "iirFilter.h"
 
 // Constants
 const int sampleRate = 6; // as fast as possible (ends up being every 6 ms)
 const int eventDisplayPeriod = 250; // ms
 
+const float lowpassFilterCoeff = 0.9;
 const float gravityFilterCoeff = 0.0001; //0.0001;
 const int minLenThresh = 25; //150*150;
 
 const float shakeGestureThreshold = 0.65;
-const int shakeEventCountThreshold = 3;
-
+const int shakeEventCountThreshold = 5;
 eventThresholdFilter shakeEventFilter(shakeGestureThreshold, shakeEventCountThreshold);
 
-const float tapGestureThreshold = 0.65;
-const int tapEventCountThreshold = 3;
+const float tapGestureThreshold = 4.0;
+const int tapEventCountThreshold = 1;
 
-const bool useMeanBuffer = true;
+const int g_tapWindowSize = 32;
+const float g_tapScaleDenominator = 32.0;
+
 const int meanBufferSize = 16;
 
 const int dotWavelength1 = 20;
@@ -35,11 +37,17 @@ floatVec3 g_gravity = {0,0,0};
 
 byteVec3 g_sampleDelayMem[delayBufferSize];
 delayBuffer<byteVec3> g_sampleDelay(g_sampleDelayMem, delayBufferSize);
+runningStats<long, byteVec3, GetZ<int8_t>> g_tapStats(g_tapWindowSize, g_sampleDelay);
+eventThresholdFilter tapEventFilter(tapGestureThreshold, tapEventCountThreshold);
 
-float g_meanDelay1Mem[meanBufferSize];
-float g_meanDelay2Mem[meanBufferSize];
-delayBuffer<float> g_meanDelay1(g_meanDelay1Mem, meanBufferSize);
-delayBuffer<float> g_meanDelay2(g_meanDelay2Mem, meanBufferSize);
+float g_meanDelay1Mem[meanBufferSize+1];
+delayBuffer<float> g_meanDelay1(g_meanDelay1Mem, meanBufferSize+1);
+runningStats<float> g_delayDotStats(meanBufferSize, g_meanDelay1);
+
+//float g_meanDelay2Mem[meanBufferSize];
+//delayBuffer<float> g_meanDelay2(g_meanDelay2Mem, meanBufferSize);
+
+
 
 // Code
 byteVec3 getAccelData()
@@ -49,7 +57,7 @@ byteVec3 getAccelData()
                     uBit.accelerometer.getZ()>>4);
 }
 
-// TODO: use iir_filter object here
+// TODO: use iirFilter object here
 void filterVec(const floatVec3& vec, floatVec3& prevVec, float alpha)
 {
     prevVec.x += alpha*(vec.x - prevVec.x);
@@ -69,55 +77,67 @@ T sum(const T* buf, int len)
     return result;
 }
 
+template <typename T>
+int8_t clampByte(const T& inVal)
+{
+    return inVal < -127 ? -127 : inVal > 128 ? 128 : inVal;
+}
+
 void processSample(byteVec3 sample)
 {
-    filterVec(floatVec3(sample), g_gravity, gravityFilterCoeff);
-    byteVec3 currentSample = byteVec3 {sample.x-g_gravity.x, sample.y-g_gravity.y, sample.z-g_gravity.z};
+    floatVec3 filteredSample;
+    filterVec(floatVec3(sample), filteredSample, lowpassFilterCoeff);
+    filterVec(filteredSample, g_gravity, gravityFilterCoeff);
+    byteVec3 currentSample = byteVec3 { clampByte(sample.x-g_gravity.x),
+                                        clampByte(sample.y-g_gravity.y),
+                                        clampByte(sample.z-g_gravity.z) };
     g_sampleDelay.addSample(currentSample);
+    g_tapStats.addSample(currentSample);
     
-    if(useMeanBuffer)
+    // TODO: use a runningStats object and delay buffer of dotNorm outputs
+    // now add val to mean buffer
+    float dot1a = dotNorm(currentSample, g_sampleDelay.getDelayedSample(dotWavelength1), minLenThresh);
+    float dot1b = dotNorm(currentSample, g_sampleDelay.getDelayedSample(2*dotWavelength1), minLenThresh);
+    if(dot1a < 0 && dot1b > 0)
     {
-        // now add val to mean buffer
-        float dot1a = dotNorm(currentSample, g_sampleDelay.getDelayedSample(dotWavelength1), minLenThresh);
-        float dot1b = dotNorm(currentSample, g_sampleDelay.getDelayedSample(2*dotWavelength1), minLenThresh);
-        if(dot1a < 0 && dot1b > 0)
-            g_meanDelay1.addSample(dot1b-dot1a);
-        else
-            g_meanDelay1.addSample(0.0); // ?
-
-        float dot2a = dotNorm(currentSample, g_sampleDelay.getDelayedSample(dotWavelength2), minLenThresh);
-        float dot2b = dotNorm(currentSample, g_sampleDelay.getDelayedSample(2*dotWavelength2), minLenThresh);
-        if(dot2a < 0 && dot2b > 0)
-            g_meanDelay2.addSample(dot2b-dot2a);
-        else
-            g_meanDelay2.addSample(0.0); // ?
+        g_meanDelay1.addSample(dot1b-dot1a);
+        g_delayDotStats.addSample(dot1b-dot1a);
     }
+    else
+    {
+        g_meanDelay1.addSample(0.0); // 
+        g_delayDotStats.addSample(0.0);
+    }
+
+
+    /*
+    float dot2a = dotNorm(currentSample, g_sampleDelay.getDelayedSample(dotWavelength2), minLenThresh);
+    float dot2b = dotNorm(currentSample, g_sampleDelay.getDelayedSample(2*dotWavelength2), minLenThresh);
+    if(dot2a < 0 && dot2b > 0)
+        g_meanDelay2.addSample(dot2b-dot2a);
+    else
+        g_meanDelay2.addSample(0.0); // ?
+    */
 }
 
 float getShakePrediction()
 {    
-    // get mean of dot with past
-    if(!useMeanBuffer)
-    {
-        float val = 0;
-        for(int index = 0; index < meanBufferSize; index++)
-        {
-            float dot1a = dotNorm(g_sampleDelay.getDelayedSample(index), g_sampleDelay.getDelayedSample(index+dotWavelength1), minLenThresh);
-            float dot1b = dotNorm(g_sampleDelay.getDelayedSample(index), g_sampleDelay.getDelayedSample(index+2*dotWavelength1), minLenThresh);
-            val += (dot1b-dot1a);
-        }
-        val /= meanBufferSize;
-        return val;
-    }
-    else
-    {
-        return sum(g_meanDelay1Mem, meanBufferSize) / meanBufferSize;
-    }
+    float mean = g_delayDotStats.getMean();
+    //float mean = sum(g_meanDelay1Mem, meanBufferSize) / meanBufferSize;
+    return mean;
 }
 
 float getTapPrediction()
 {
-    return 0.0;
+    float val1 = g_sampleDelay.getDelayedSample(g_tapWindowSize/2 - 2).z + 
+        g_sampleDelay.getDelayedSample(g_tapWindowSize/2 - 1).z + 
+        g_sampleDelay.getDelayedSample(g_tapWindowSize/2).z;
+    float val2 = g_sampleDelay.getDelayedSample(g_tapWindowSize/2 + 1).z + 
+        g_sampleDelay.getDelayedSample(g_tapWindowSize/2 + 2).z + 
+        g_sampleDelay.getDelayedSample(g_tapWindowSize/2 + 3).z;
+    float val = val1 - 0.25*val2;
+    float std = g_tapStats.getStdDev();
+    return val / (std + g_tapScaleDenominator);
 }
 
 enum MicroBitAccelerometerEvents
@@ -127,13 +147,13 @@ enum MicroBitAccelerometerEvents
     };
 
 
-void onShake(MicroBitEvent evt)
+void onShake(MicroBitEvent)
 {
     uBit.display.print('#');
     // TODO: set a timer to turn off?
 }
 
-void onTap(MicroBitEvent evt)
+void onTap(MicroBitEvent)
 {
     uBit.display.print('T');
 }
@@ -142,23 +162,26 @@ int detectGesture()
 {
     uBit.accelerometer.update();
     byteVec3 sample = getAccelData();
-
     
     processSample(sample);
+
+    float tapPredVal = getTapPrediction();
+    bool foundTap = tapEventFilter.filterValue(tapPredVal);
+    if(foundTap)
+    {
+        shakeEventFilter.reset();
+        return MICROBIT_ACCELEROMETER_TAP;
+    }
+
     float shakePredVal = getShakePrediction();
     bool foundShake = shakeEventFilter.filterValue(shakePredVal);
     if(foundShake)
     {
+        tapEventFilter.reset();
         return MICROBIT_ACCELEROMETER_SHAKE;
     }
 
-    float tapPredVal = getTapPrediction();
-    //    bool foundTap = filterDetectorOutput(tapPredVal, tapGestureThreshold, tapEventCountThreshold);
-    //    if(foundTap)
-    //    {
-    //        return MICROBIT_ACCELEROMETER_TAP;
-    //    }
-
+    
     return 0;
 }
 
@@ -209,5 +232,5 @@ void app_main()
 
     // ... and listen for them
     uBit.MessageBus.listen(MICROBIT_ID_ACCELEROMETER, MICROBIT_ACCELEROMETER_SHAKE, onShake);
-    //    uBit.MessageBus.listen(MICROBIT_ID_ACCELEROMETER, MICROBIT_ACCELEROMETER_TAP, onTap);
+    uBit.MessageBus.listen(MICROBIT_ID_ACCELEROMETER, MICROBIT_ACCELEROMETER_TAP, onTap);
 }

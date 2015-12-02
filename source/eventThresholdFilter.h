@@ -3,7 +3,7 @@
 class eventThresholdFilter
 {
 public:
-    eventThresholdFilter(float gestureThreshold, int eventCountThreshold) : gestureThreshold_(gestureThreshold), eventCountThreshold_(eventCountThreshold), count_(0) {};
+    eventThresholdFilter(float gestureThreshold, int eventCountThreshold) : count_(0), gestureThreshold_(gestureThreshold), eventCountThreshold_(eventCountThreshold) {};
     bool filterValue(float value)
     {
         if(value > gestureThreshold_)
@@ -19,6 +19,11 @@ public:
             count_ = 0;
         }
         return false;
+    }
+
+    void reset()
+    {
+        count_ = 0;
     }
 
 private:
