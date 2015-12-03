@@ -9,18 +9,18 @@ const int sampleRate = 6; // as fast as possible (ends up being every 6 ms)
 const int eventDisplayPeriod = 250; // ms
 
 const float lowpassFilterCoeff = 0.9;
-const float gravityFilterCoeff = 0.0001; //0.0001;
+const float gravityFilterCoeff = 0.00001;
 const int minLenThresh = 25; //150*150;
 
 const float shakeGestureThreshold = 0.65;
 const int shakeEventCountThreshold = 5;
 eventThresholdFilter shakeEventFilter(shakeGestureThreshold, shakeEventCountThreshold);
 
-const float tapGestureThreshold = 4.0;
+const float tapGestureThreshold = 3.5;
 const int tapEventCountThreshold = 1;
 
 const int g_tapWindowSize = 32;
-const float g_tapScaleDenominator = 32.0;
+const float g_tapScaleDenominator = 35.0;
 
 const int meanBufferSize = 16;
 
@@ -94,7 +94,6 @@ void processSample(byteVec3 sample)
     g_sampleDelay.addSample(currentSample);
     g_tapStats.addSample(currentSample);
     
-    // TODO: use a runningStats object and delay buffer of dotNorm outputs
     // now add val to mean buffer
     float dot1a = dotNorm(currentSample, g_sampleDelay.getDelayedSample(dotWavelength1), minLenThresh);
     float dot1b = dotNorm(currentSample, g_sampleDelay.getDelayedSample(2*dotWavelength1), minLenThresh);
@@ -122,9 +121,7 @@ void processSample(byteVec3 sample)
 
 float getShakePrediction()
 {    
-    float mean = g_delayDotStats.getMean();
-    //float mean = sum(g_meanDelay1Mem, meanBufferSize) / meanBufferSize;
-    return mean;
+    return g_delayDotStats.getMean();
 }
 
 float getTapPrediction()
