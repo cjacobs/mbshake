@@ -83,7 +83,7 @@ public:
 
     float getStdDev()
     {
-        return fast_inv_sqrt(getVar());
+        return 1.0 / fast_inv_sqrt(getVar());
     }
 
 private:
