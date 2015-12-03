@@ -5,7 +5,7 @@
 #include "iirFilter.h"
 
 // Constants
-const int sampleRate = 6; // as fast as possible (ends up being every 6 ms)
+const int sampleRate = 18; // in ms
 const int eventDisplayPeriod = 250; // ms
 
 const float lowpassFilterCoeff = 0.9;
