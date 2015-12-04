@@ -16,16 +16,16 @@ const float shakeGestureThreshold = 0.65;
 const int shakeEventCountThreshold = 5;
 eventThresholdFilter shakeEventFilter(shakeGestureThreshold, shakeEventCountThreshold);
 
-const float tapGestureThreshold = 3.5;
+const float tapGestureThreshold = 2.0;
 const int tapEventCountThreshold = 1;
 
-const int g_tapWindowSize = 32;
-const float g_tapScaleDenominator = 35.0;
+const int g_tapWindowSize = 11;
+const float g_tapScaleDenominator = 2.5;
 
 const int meanBufferSize = 16;
 
-const int dotWavelength1 = 20;
-const int dotWavelength2 = 25;
+const int dotWavelength1 = 10;
+const int dotWavelength2 = 13;
 const int delayBufferSize = 2*(dotWavelength2) + meanBufferSize;
 
 
