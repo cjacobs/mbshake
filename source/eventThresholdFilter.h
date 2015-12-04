@@ -6,10 +6,10 @@ public:
     eventThresholdFilter(float gestureThreshold, int eventCountThreshold) : count_(0), gestureThreshold_(gestureThreshold), eventCountThreshold_(eventCountThreshold) {};
     bool filterValue(float value)
     {
-        if(value > gestureThreshold_)
+        if(value >= gestureThreshold_)
         {
             count_++;
-            if (count_ > eventCountThreshold_)
+            if (count_ >= eventCountThreshold_)
             {
                 return true;
             }
