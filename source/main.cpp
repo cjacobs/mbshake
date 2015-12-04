@@ -12,17 +12,17 @@ const float lowpassFilterCoeff = 0.9;
 const float gravityFilterCoeff = 0.00001;
 const int minLenThresh = 25; //150*150;
 
-const float shakeGestureThreshold = 0.65;
-const int shakeEventCountThreshold = 5;
+const float shakeGestureThreshold = 0.12;
+const int shakeEventCountThreshold = 3;
 eventThresholdFilter shakeEventFilter(shakeGestureThreshold, shakeEventCountThreshold);
 
-const float tapGestureThreshold = 2.0;
+const float tapGestureThreshold = 2.5;
 const int tapEventCountThreshold = 1;
 
 const int g_tapWindowSize = 11;
 const float g_tapScaleDenominator = 2.5;
 
-const int meanBufferSize = 16;
+const int meanBufferSize = 11;
 
 const int dotWavelength1 = 10;
 const int dotWavelength2 = 13;
@@ -121,6 +121,8 @@ void processSample(byteVec3 sample)
 
 float getShakePrediction()
 {    
+    float mean = g_delayDotStats.getMean();
+    printf("shake: %d\r\n", int(1000*mean));
     return g_delayDotStats.getMean();
 }
 
