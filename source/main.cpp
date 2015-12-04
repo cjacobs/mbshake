@@ -5,27 +5,27 @@
 #include "iirFilter.h"
 
 // Constants
-const int sampleRate = 6; // as fast as possible (ends up being every 6 ms)
+const int sampleRate = 18; // in ms
 const int eventDisplayPeriod = 250; // ms
 
 const float lowpassFilterCoeff = 0.9;
-const float gravityFilterCoeff = 0.00001;
+const float gravityFilterCoeff = 0.05;
 const int minLenThresh = 25; //150*150;
 
-const float shakeGestureThreshold = 0.65;
-const int shakeEventCountThreshold = 5;
+const float shakeGestureThreshold = 1.0;
+const int shakeEventCountThreshold = 3;
 eventThresholdFilter shakeEventFilter(shakeGestureThreshold, shakeEventCountThreshold);
 
-const float tapGestureThreshold = 3.5;
+const float tapGestureThreshold = 1.7;
 const int tapEventCountThreshold = 1;
 
-const int g_tapWindowSize = 32;
-const float g_tapScaleDenominator = 35.0;
+const int g_tapWindowSize = 11;
+const float g_tapScaleDenominator = 2.5;
 
-const int meanBufferSize = 16;
+const int meanBufferSize = 11;
 
-const int dotWavelength1 = 20;
-const int dotWavelength2 = 25;
+const int dotWavelength1 = 6;
+const int dotWavelength2 = 13;
 const int delayBufferSize = 2*(dotWavelength2) + meanBufferSize;
 
 
@@ -91,6 +91,11 @@ void processSample(byteVec3 sample)
     byteVec3 currentSample = byteVec3 { clampByte(sample.x-g_gravity.x),
                                         clampByte(sample.y-g_gravity.y),
                                         clampByte(sample.z-g_gravity.z) };
+    
+    //    printf("sample:  %d\t%d\t%d\r\n", currentSample.x, currentSample.y, currentSample.z);
+    //    printf("gravity: %d\t%d\t%d\r\n", int(g_gravity.x), int(g_gravity.y), int(g_gravity.z));
+    //    printf("\r\n");
+
     g_sampleDelay.addSample(currentSample);
     g_tapStats.addSample(currentSample);
     
@@ -121,20 +126,21 @@ void processSample(byteVec3 sample)
 
 float getShakePrediction()
 {    
+    float mean = g_delayDotStats.getMean();
+    printf("shake: %d\r\n", int(1000*mean));
     return g_delayDotStats.getMean();
 }
 
 float getTapPrediction()
 {
-    float val1 = g_sampleDelay.getDelayedSample(g_tapWindowSize/2 - 2).z + 
-        g_sampleDelay.getDelayedSample(g_tapWindowSize/2 - 1).z + 
-        g_sampleDelay.getDelayedSample(g_tapWindowSize/2).z;
-    float val2 = g_sampleDelay.getDelayedSample(g_tapWindowSize/2 + 1).z + 
-        g_sampleDelay.getDelayedSample(g_tapWindowSize/2 + 2).z + 
-        g_sampleDelay.getDelayedSample(g_tapWindowSize/2 + 3).z;
-    float val = val1 - 0.25*val2;
-    float std = g_tapStats.getStdDev();
-    return val / (std + g_tapScaleDenominator);
+  float val1 = g_sampleDelay.getDelayedSample(g_tapWindowSize/2).z - g_tapStats.getMean();
+  float val2 = g_sampleDelay.getDelayedSample(g_tapWindowSize/2 - 1).z - g_tapStats.getMean();
+  float val = val1 - 0.25*val2;
+  float std = g_tapStats.getStdDev();
+  
+  //  printf("z: %d\tstd: %d\ttap: %d\r\n", int(val1), int(1000*std), int(1000*val/(std+g_tapScaleDenominator)));
+  
+  return val / (std + g_tapScaleDenominator);
 }
 
 enum MicroBitAccelerometerEvents
@@ -146,7 +152,7 @@ enum MicroBitAccelerometerEvents
 
 void onShake(MicroBitEvent)
 {
-    uBit.display.print('#');
+  uBit.display.print('#');
     // TODO: set a timer to turn off?
 }
 
