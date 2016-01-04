@@ -24,8 +24,8 @@ const float g_tapScaleDenominator = 2.5;
 
 const int meanBufferSize = 11;
 
-const int dotWavelength1 = 6;
-const int dotWavelength2 = 13;
+const int dotWavelength1 = 8;
+const int dotWavelength2 = 11;
 const int delayBufferSize = 2*(dotWavelength2) + meanBufferSize;
 
 
