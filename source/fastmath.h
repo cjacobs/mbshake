@@ -1,7 +1,15 @@
 #pragma once
 
+#include <stdint.h>
+
+template <typename T>
+int8_t clampByte(const T& inVal)
+{
+    return inVal < -127 ? -127 : inVal > 128 ? 128 : inVal;
+}
+
 // adapted from https://en.wikipedia.org/wiki/Fast_inverse_square_root
-float fast_inv_sqrt(float val)
+inline float fast_inv_sqrt(float val)
 {
 	const float threehalfs = 1.5F;
 
