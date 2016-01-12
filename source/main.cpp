@@ -1,6 +1,8 @@
 #include "MicroBitTouchDevelop.h"
 #include "vec3.h"
 
+const int sampleRate = 18; // ms (6ms is as fast as possible)
+const bool useGravity = false;
 floatVec3 gravity = {0,0,0};
 
 void filterVec(float x, float y, float z, floatVec3& prevVec, float alpha)
@@ -14,8 +16,6 @@ void app_main()
 {
     unsigned long prevTime = 0;
 
-    const bool useGravity = false;
-
     if(useGravity)
     {
         uBit.accelerometer.update();
@@ -28,7 +28,7 @@ void app_main()
     {
         unsigned long time = uBit.systemTime();
 
-        if (time != prevTime)
+        if ((time-prevTime) >= sampleRate || time < prevTime) 
         {
             uBit.accelerometer.update();
 
