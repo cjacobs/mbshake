@@ -48,8 +48,27 @@ int g_tapCountdown = 0;
 //float g_meanDelay2Mem[meanBufferSize];
 //delayBuffer<float> g_meanDelay2(g_meanDelay2Mem, meanBufferSize);
 
+
+// !!! Can we subsample a sequence at compile time using template metaprogramming?
+
 // templates
 const byteVec3 shakeTemplate1[16] = {{1,2,3}}; // TODO: this
+
+
+// need a templateDist function that takes a template, delay line, and resample rate, and returns the distance between the template and signal represented by the delay line, subsampled by the resample rate
+
+template <typename T, typename U, int N, int ResampleRate>
+float templateDist(T* template, delayBuffer<U>& signal)
+{
+    // TODO: can probably do all the following with template metaprogramming if we really care
+    float result;
+    for(int index = 0; index < N; index++)
+    {
+        auto temp = template[index]-signal.getDelayedSample(ResampleRate*index);
+        result += temp*temp;
+    }
+    return result;
+}
 
 
 // TODO: use iirFilter object here
