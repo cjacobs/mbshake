@@ -52,6 +52,17 @@ public:
     }
 };
 
+template <typename T, typename U=T>
+class GetMagSq
+{
+public:
+    static U get_val(const vec3<T>& vec)
+    {
+        U temp = vec.x*vec.x + vec.y*vec.y + vec.z*vec.z;
+        return temp;
+    }
+};
+
 
 typedef vec3<int8_t> byteVec3;
 typedef vec3<short> shortVec3;

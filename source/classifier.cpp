@@ -12,6 +12,7 @@ const int minLenThresh = 25; //150*150;
 
 const float shakeGestureThreshold = 0.65;
 const int shakeEventCountThreshold = 3;
+const float shakeGateThreshSquared = 1600000;
 eventThresholdFilter shakeEventFilter(shakeGestureThreshold, shakeEventCountThreshold);
 
 const float tapGestureThreshold = 1.7;
@@ -19,7 +20,7 @@ const int tapEventCountThreshold = 1;
 
 const int g_tapWindowSize = 11;
 const float g_tapScaleDenominator = 2.5;
-const int tapGateThresh = 100;
+const int tapGateThresh = 130;
 const int g_tapK = 3;
 
 const int meanBufferSize = 11;
@@ -41,6 +42,8 @@ eventThresholdFilter tapEventFilter(tapGestureThreshold, tapEventCountThreshold)
 float g_meanDelay1Mem[meanBufferSize+1];
 delayBuffer<float> g_meanDelay1(g_meanDelay1Mem, meanBufferSize+1);
 runningStats<float> g_delayDotStats(meanBufferSize, g_meanDelay1);
+
+runningStats<float, byteVec3, GetMagSq<int8_t, float>> g_shakeStats(meanBufferSize, g_sampleDelay);
 
 int g_tapCountdown = 0;
 
@@ -80,8 +83,9 @@ void processSample(byteVec3 sample)
     //    printf("gravity: %d\t%d\t%d\r\n", int(g_gravity.x), int(g_gravity.y), int(g_gravity.z));
     //    printf("\r\n");
 
-    g_sampleDelay.addSample(currentSample);
+    g_sampleDelay.addSample(currentSample); // TODO: maybe we should somehow associate the stats objects with the delay lines
     g_tapStats.addSample(currentSample);
+    g_shakeStats.addSample(currentSample);
     
     // now add val to mean buffer
     float dot1a = dotNorm(currentSample, g_sampleDelay.getDelayedSample(dotWavelength1), minLenThresh);
@@ -139,6 +143,7 @@ int detectGesture()
     byteVec3 sample = getAccelData();
 
     bool shouldCheckTap = g_tapCountdown > 0; //  && g_tapCountdown <= g_tapK;
+    bool shouldCheckShake = g_shakeStats.getVar() > shakeGateThreshSquared;
 
     int zDiff = abs(sample.z - g_sampleDelay.getDelayedSample(2).z);
     if (zDiff >= tapGateThresh)
@@ -163,13 +168,19 @@ int detectGesture()
         }
     }
 
-    float shakePredVal = getShakePrediction();
-    bool foundShake = shakeEventFilter.filterValue(shakePredVal);
-    if(foundShake)
+    if(shouldCheckShake)
     {
-        tapEventFilter.reset();
-        return MICROBIT_ACCELEROMETER_SHAKE;
+        float shakePredVal = getShakePrediction();
+        bool foundShake = shakeEventFilter.filterValue(shakePredVal);
+        if(foundShake)
+        {
+            tapEventFilter.reset();
+            return MICROBIT_ACCELEROMETER_SHAKE;
+        }
     }
-    
+    else
+    {
+        shakeEventFilter.reset();
+    }
     return 0;
 }
