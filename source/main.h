@@ -4,3 +4,7 @@
 
 void updateAccelerometer();
 byteVec3 getAccelData();
+
+void serialPrint(const char* str);
+void serialPrint(int val);
+void serialPrint(float val);

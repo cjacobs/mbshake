@@ -23,6 +23,22 @@ byteVec3 getAccelData()
                     uBit.accelerometer.getZ()>>4);
 }
 
+void serialPrint(const char* str)
+{
+    printf("%s\r\n", str);
+}
+
+void serialPrint(int val)
+{
+    printf("%d\r\n", val);
+}
+
+void serialPrint(float val)
+{
+    float frac = val - int(val);
+    printf("%d.%03d\r\n", int(val), int(1000*frac));
+}
+
 // Local code
 void accelerometer_poll()
 {
