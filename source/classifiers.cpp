@@ -2,7 +2,7 @@
 #include "delayBuffer.h"
 #include "eventThresholdFilter.h"
 #include "iirFilter.h"
-#include "classifier.h"
+#include "classifiers.h"
 #include "main.h"
 
 // Constants
@@ -142,7 +142,7 @@ int detectGesture()
     updateAccelerometer();
     byteVec3 sample = getAccelData();
 
-    bool shouldCheckTap = g_tapCountdown > 0; //  && g_tapCountdown <= g_tapK;
+    bool shouldCheckTap = g_tapCountdown > 0;
     bool shouldCheckShake = g_shakeStats.getVar() > shakeGateThreshSquared;
 
     int zDiff = abs(sample.z - g_sampleDelay.getDelayedSample(2).z);
