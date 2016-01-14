@@ -10,7 +10,7 @@ const float lowpassFilterCoeff = 0.9;
 const float gravityFilterCoeff = 0.05;
 const int minLenThresh = 25; //150*150;
 
-const float shakeGestureThreshold = 1.0;
+const float shakeGestureThreshold = 0.65;
 const int shakeEventCountThreshold = 3;
 eventThresholdFilter shakeEventFilter(shakeGestureThreshold, shakeEventCountThreshold);
 
@@ -19,12 +19,15 @@ const int tapEventCountThreshold = 1;
 
 const int g_tapWindowSize = 11;
 const float g_tapScaleDenominator = 2.5;
+const int tapGateThresh = 100;
+const int g_tapK = 3;
 
 const int meanBufferSize = 11;
 
 const int dotWavelength1 = 6;
 const int dotWavelength2 = 13;
 const int delayBufferSize = 2*(dotWavelength2) + meanBufferSize;
+
 
 
 // Globals
@@ -38,6 +41,8 @@ eventThresholdFilter tapEventFilter(tapGestureThreshold, tapEventCountThreshold)
 float g_meanDelay1Mem[meanBufferSize+1];
 delayBuffer<float> g_meanDelay1(g_meanDelay1Mem, meanBufferSize+1);
 runningStats<float> g_delayDotStats(meanBufferSize, g_meanDelay1);
+
+int g_tapCountdown = 0;
 
 //float g_meanDelay2Mem[meanBufferSize];
 //delayBuffer<float> g_meanDelay2(g_meanDelay2Mem, meanBufferSize);
@@ -132,15 +137,30 @@ int detectGesture()
 {
     updateAccelerometer();
     byteVec3 sample = getAccelData();
-    
+
+    bool shouldCheckTap = g_tapCountdown > 0; //  && g_tapCountdown <= g_tapK;
+
+    int zDiff = abs(sample.z - g_sampleDelay.getDelayedSample(2).z);
+    if (zDiff >= tapGateThresh)
+    {
+        g_tapCountdown = (g_tapWindowSize/2) + g_tapK;
+    }
+    else if(g_tapCountdown > 0)
+    {
+        g_tapCountdown -= 1;
+    }
+
     processSample(sample);
 
-    float tapPredVal = getTapPrediction();
-    bool foundTap = tapEventFilter.filterValue(tapPredVal);
-    if(foundTap)
+    if(shouldCheckTap)
     {
-        shakeEventFilter.reset();
-        return MICROBIT_ACCELEROMETER_TAP;
+        float tapPredVal = getTapPrediction();
+        bool foundTap = tapEventFilter.filterValue(tapPredVal);
+        if(foundTap)
+        {
+            shakeEventFilter.reset();
+            return MICROBIT_ACCELEROMETER_TAP;
+        }
     }
 
     float shakePredVal = getShakePrediction();
