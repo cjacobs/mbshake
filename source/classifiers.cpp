@@ -29,8 +29,6 @@ const int dotWavelength1 = 6;
 const int dotWavelength2 = 13;
 const int delayBufferSize = 2*(dotWavelength2) + meanBufferSize;
 
-
-
 // Globals
 floatVec3 g_gravity = {0,0,0};
 
@@ -49,6 +47,10 @@ int g_tapCountdown = 0;
 
 //float g_meanDelay2Mem[meanBufferSize];
 //delayBuffer<float> g_meanDelay2(g_meanDelay2Mem, meanBufferSize);
+
+// templates
+const byteVec3 shakeTemplate1[16] = {{1,2,3}}; // TODO: this
+
 
 // TODO: use iirFilter object here
 void filterVec(const floatVec3& vec, floatVec3& prevVec, float alpha)
