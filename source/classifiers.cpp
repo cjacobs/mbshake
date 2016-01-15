@@ -1,5 +1,6 @@
 #include "vec3.h"
 #include "delayBuffer.h"
+#include "runningStats.h"
 #include "eventThresholdFilter.h"
 #include "iirFilter.h"
 #include "classifiers.h"
@@ -68,6 +69,7 @@ const byteVec3 shakeTemplate1[16] = {{1,2,3}}; // TODO: this
 
 // need a templateDist function that takes a template, delay line, and resample rate, and returns the distance between the template and signal represented by the delay line, subsampled by the resample rate
 
+/*
 template <typename T, typename U, int N, int ResampleRate>
 float templateDist(T* template, delayBuffer<U>& signal)
 {
@@ -80,7 +82,7 @@ float templateDist(T* template, delayBuffer<U>& signal)
     }
     return result;
 }
-
+*/
 
 // TODO: use iirFilter object here
 void filterVec(const floatVec3& vec, floatVec3& prevVec, float alpha)
