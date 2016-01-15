@@ -7,7 +7,7 @@
 
 // Constants
 const float lowpassFilterCoeff = 0.9;
-const float gravityFilterCoeff = 0.05;
+const float gravityFilterCoeff = 0.05; // problem: gravity converges too slowly
 const int minLenThresh = 25; //150*150;
 
 const float shakeGestureThreshold = 0.65;
@@ -20,16 +20,17 @@ const int tapEventCountThreshold = 1;
 
 const int g_tapWindowSize = 11;
 const float g_tapScaleDenominator = 2.5;
-const int tapGateThresh = 130;
+const float tapGateThresh1 = 500; // variance of preceeding windown should be less than this
+const int tapGateThresh2 = 120; // intensity of impulse should be greater than this
 const int g_tapK = 3;
 
-const int meanBufferSize = 11;
+const int meanBufferSize = 8;
 
 const int dotWavelength1 = 6;
-const int dotWavelength2 = 13;
+const int dotWavelength2 = 8;
 const int delayBufferSize = 2*(dotWavelength2) + meanBufferSize;
 
-
+// TODO: half-phase delayed versions
 
 // Globals
 floatVec3 g_gravity = {0,0,0};
@@ -39,13 +40,21 @@ delayBuffer<byteVec3> g_sampleDelay(g_sampleDelayMem, delayBufferSize);
 runningStats<long, byteVec3, GetZ<int8_t>> g_tapStats(g_tapWindowSize, g_sampleDelay);
 eventThresholdFilter tapEventFilter(tapGestureThreshold, tapEventCountThreshold);
 
+runningStats<float, byteVec3, GetMagSq<int8_t, float>> g_shakeThreshStats(meanBufferSize, g_sampleDelay);
+
+// TODO: quantize this to a short or something
 float g_meanDelay1Mem[meanBufferSize+1];
 delayBuffer<float> g_meanDelay1(g_meanDelay1Mem, meanBufferSize+1);
-runningStats<float> g_delayDotStats(meanBufferSize, g_meanDelay1);
+runningStats<float> g_delayDot1Stats(meanBufferSize, g_meanDelay1);
 
-runningStats<float, byteVec3, GetMagSq<int8_t, float>> g_shakeStats(meanBufferSize, g_sampleDelay);
+// TODO: quantize this to a short or something
+float g_meanDelay2Mem[meanBufferSize+1];
+delayBuffer<float> g_meanDelay2(g_meanDelay2Mem, meanBufferSize+1);
+runningStats<float> g_delayDot2Stats(meanBufferSize, g_meanDelay2);
 
-int g_tapCountdown = 0;
+
+int g_tapCountdown1 = 0;
+int g_tapCountdown2 = 0;
 
 //float g_meanDelay2Mem[meanBufferSize];
 //delayBuffer<float> g_meanDelay2(g_meanDelay2Mem, meanBufferSize);
@@ -79,13 +88,9 @@ void processSample(byteVec3 sample)
                                         clampByte(sample.y-g_gravity.y),
                                         clampByte(sample.z-g_gravity.z) };
     
-    //    printf("sample:  %d\t%d\t%d\r\n", currentSample.x, currentSample.y, currentSample.z);
-    //    printf("gravity: %d\t%d\t%d\r\n", int(g_gravity.x), int(g_gravity.y), int(g_gravity.z));
-    //    printf("\r\n");
-
     g_sampleDelay.addSample(currentSample); // TODO: maybe we should somehow associate the stats objects with the delay lines
     g_tapStats.addSample(currentSample);
-    g_shakeStats.addSample(currentSample);
+    g_shakeThreshStats.addSample(currentSample);
     
     // now add val to mean buffer
     float dot1a = dotNorm(currentSample, g_sampleDelay.getDelayedSample(dotWavelength1), minLenThresh);
@@ -93,28 +98,31 @@ void processSample(byteVec3 sample)
     if(dot1a < 0 && dot1b > 0)
     {
         g_meanDelay1.addSample(dot1b-dot1a);
-        g_delayDotStats.addSample(dot1b-dot1a);
+        g_delayDot1Stats.addSample(dot1b-dot1a);
     }
     else
     {
         g_meanDelay1.addSample(0.0);
-        g_delayDotStats.addSample(0.0);
+        g_delayDot1Stats.addSample(0.0);
     }
 
-
-    /*
     float dot2a = dotNorm(currentSample, g_sampleDelay.getDelayedSample(dotWavelength2), minLenThresh);
     float dot2b = dotNorm(currentSample, g_sampleDelay.getDelayedSample(2*dotWavelength2), minLenThresh);
     if(dot2a < 0 && dot2b > 0)
+    {
         g_meanDelay2.addSample(dot2b-dot2a);
+        g_delayDot2Stats.addSample(dot2b-dot2a);
+    }
     else
-        g_meanDelay2.addSample(0.0); // ?
-    */
+    {
+        g_meanDelay2.addSample(0.0);
+        g_delayDot2Stats.addSample(0.0);
+    }
 }
 
 float getShakePrediction()
 {    
-    return g_delayDotStats.getMean();
+    return std::max(g_delayDot1Stats.getMean(), g_delayDot2Stats.getMean());
 }
 
 float getTapPrediction()
@@ -124,8 +132,6 @@ float getTapPrediction()
   float val = val1 - 0.25*val2;
   float std = g_tapStats.getStdDev();
   
-  //  printf("time: %ld\tz: %d\tstd: %d\ttap: %d\r\n", uBit.systemTime(), int(val1), int(1000*std), int(1000*val/(std+g_tapScaleDenominator)));
-
   return val / (std + g_tapScaleDenominator);
 }
 
@@ -142,17 +148,29 @@ int detectGesture()
     updateAccelerometer();
     byteVec3 sample = getAccelData();
 
-    bool shouldCheckTap = g_tapCountdown > 0;
-    bool shouldCheckShake = g_shakeStats.getVar() > shakeGateThreshSquared;
+    bool shouldCheckTap = g_tapCountdown1 > 0 && g_tapCountdown2 > 0;
+    bool shouldCheckShake = g_shakeThreshStats.getVar() > shakeGateThreshSquared;
+
+    // criterion 1: look for 5 samples worth of quiet
+    float tapVar = g_tapStats.getVar();
+
+    if (tapVar <= tapGateThresh1)
+    {
+        g_tapCountdown1 = g_tapWindowSize + g_tapK;
+    }
+    else if(g_tapCountdown1 > 0)
+    {
+        g_tapCountdown1 -= 1;
+    }
 
     int zDiff = abs(sample.z - g_sampleDelay.getDelayedSample(2).z);
-    if (zDiff >= tapGateThresh)
+    if (zDiff >= tapGateThresh2)
     {
-        g_tapCountdown = (g_tapWindowSize/2) + g_tapK;
+        g_tapCountdown2 = (g_tapWindowSize/2) + g_tapK;
     }
-    else if(g_tapCountdown > 0)
+    else if(g_tapCountdown2 > 0)
     {
-        g_tapCountdown -= 1;
+        g_tapCountdown2 -= 1;
     }
 
     processSample(sample);

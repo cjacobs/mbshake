@@ -35,6 +35,11 @@ void serialPrint(int val)
 
 void serialPrint(float val)
 {
+    if(val < 0)
+    {
+        printf("-");
+        val = -val;
+    }
     float frac = val - int(val);
     printf("%d.%03d\r\n", int(val), int(1000*frac));
 }
@@ -70,12 +75,12 @@ void accelerometer_poll()
 // Event handlers
 void onShake(MicroBitEvent)
 {
-  uBit.display.print('S');
+  uBit.display.print('#');
 }
 
 void onTap(MicroBitEvent)
 {
-    uBit.display.print('T');
+    uBit.display.print('.');
 }
 
 void app_main()
