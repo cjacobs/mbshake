@@ -89,3 +89,15 @@ float dotNorm(const vec3<T>& a, const vec3<T>& b, int minLenThresh)
     //    return val / (sqrt(aLenSq)*sqrt(bLenSq));
     return val * fast_inv_sqrt(aLenSq) * fast_inv_sqrt(bLenSq);
 }
+
+template <typename T>
+float normSq(const vec3<T>& v)
+{
+    return dot(v,v);
+}
+
+template <typename T>
+vec3<T> operator-(const vec3<T>& a, const vec3<T>& b)
+{
+    return vec3<T>(a.x-b.x, a.y-b.y, a.z-b.z);
+}

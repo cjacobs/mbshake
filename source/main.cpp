@@ -4,7 +4,7 @@
 
 // Constants
 const int sampleRate = 18; // in ms
-const int eventDisplayPeriod = 250; // ms
+const int eventDisplayPeriod = 18; //250; // ms
 
 // Globals
 unsigned long g_prevTime = 0;
@@ -23,9 +23,24 @@ byteVec3 getAccelData()
                     uBit.accelerometer.getZ()>>4);
 }
 
+bool buttonA()
+{
+    return uBit.buttonA.isPressed();
+}
+
+bool buttonB()
+{
+    return uBit.buttonB.isPressed();
+}
+
 void serialPrint(const char* str)
 {
     printf("%s\r\n", str);
+}
+
+void serialPrint(const char* label, int val)
+{
+    printf("%s%d\r\n", label, val);
 }
 
 void serialPrint(int val)
@@ -33,15 +48,31 @@ void serialPrint(int val)
     printf("%d\r\n", val);
 }
 
-void serialPrint(float val)
+void serialPrint(const char* label, float val)
 {
+    char minus[3] = "\0\0";
     if(val < 0)
     {
-        printf("-");
+        minus[0] = '-';
         val = -val;
     }
     float frac = val - int(val);
-    printf("%d.%03d\r\n", int(val), int(1000*frac));
+    printf("%s%s%d.%03d\r\n", label, minus, int(val), int(1000*frac));
+}
+
+void serialPrint(float val)
+{
+    serialPrint("", val);
+}
+
+void serialPrint(const char* label, const byteVec3& v)
+{
+    printf("%s%d\t%d\t%d\r\n", label, v.x, v.y, v.z);
+}
+
+void serialPrint(const byteVec3& v)
+{
+    printf("%d\t%d\t%d\r\n", v.x, v.y, v.z);
 }
 
 // Local code

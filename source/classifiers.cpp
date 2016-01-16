@@ -6,6 +6,13 @@
 #include "classifiers.h"
 #include "main.h"
 
+// TODO:
+// * Maybe modulate the shake output slightly by the amount of energy? --- soft shakes
+//     return a very large prediction value --- often higher than a strong shake
+// * Maybe tune shake frequency by energy? hard shakes are somewhat slower (are they?)
+// * Maybe use max over some window instead of mean for shake pred value? (though this
+//     risks making transitory spikes last longer and be harder to filter out
+
 // Constants
 const float lowpassFilterCoeff = 0.9;
 const float gravityFilterCoeff = 0.05; // problem: gravity converges too slowly
@@ -29,7 +36,9 @@ const int meanBufferSize = 8;
 
 const int dotWavelength1 = 6;
 const int dotWavelength2 = 8;
-const int delayBufferSize = 2*(dotWavelength2) + meanBufferSize;
+
+// const int delayBufferSize = 2*(dotWavelength2) + meanBufferSize;
+const int delayBufferSize = 33;
 
 // TODO: half-phase delayed versions
 
@@ -64,25 +73,41 @@ int g_tapCountdown2 = 0;
 // !!! Can we subsample a sequence at compile time using template metaprogramming?
 
 // templates
-const byteVec3 shakeTemplate1[16] = {{1,2,3}}; // TODO: this
-
+const byteVec3 shakeTemplate1[] = {{ -10,    7,  -91},
+                                   {  43,    0, -102},
+                                   { 107,  -37, -101},
+                                   { 109,    5,  -75},
+                                   {  98,   56,  -66},
+                                   {   9,   97,  -36},
+                                   { -67,   78,  -65},
+                                   { -86,   40, -127},
+                                   { -87,   55, -103},
+                                   { -29,   64,  -97},
+                                   {  43,   64,  -84},
+                                   {  81,   28,  -82},
+                                   { 108,  -41,  -78},
+                                   {  76,  -13,  -69},
+                                   {  10,    3,  -46},
+                                   {  -2,   -1,  -49}};
 
 // need a templateDist function that takes a template, delay line, and resample rate, and returns the distance between the template and signal represented by the delay line, subsampled by the resample rate
 
-/*
-template <typename T, typename U, int N, int ResampleRate>
-float templateDist(T* template, delayBuffer<U>& signal)
+
+// Note: tmpl should be time-reversed
+template <int N, int ResampleRate, typename T, typename U>
+float templateDistSq(T* tmpl, delayBuffer<U>& signal)
 {
     // TODO: can probably do all the following with template metaprogramming if we really care
     float result;
     for(int index = 0; index < N; index++)
     {
-        auto temp = template[index]-signal.getDelayedSample(ResampleRate*index);
-        result += temp*temp;
+        auto temp = tmpl[N-index-1] - signal.getDelayedSample(ResampleRate*index);
+        auto tempNormSq = normSq(temp);
+        result += tempNormSq;
     }
     return result;
 }
-*/
+
 
 // TODO: use iirFilter object here
 void filterVec(const floatVec3& vec, floatVec3& prevVec, float alpha)
@@ -91,6 +116,8 @@ void filterVec(const floatVec3& vec, floatVec3& prevVec, float alpha)
     prevVec.y += alpha*(vec.y - prevVec.y);
     prevVec.z += alpha*(vec.z - prevVec.z);
 }
+
+
 
 template <typename T>
 T sum(const T* buf, int len)
@@ -107,13 +134,19 @@ T sum(const T* buf, int len)
 void processSample(byteVec3 sample)
 {
     floatVec3 filteredSample;
+    filteredSample.x = sample.x;
+    filteredSample.y = sample.y;
+    filteredSample.z = sample.z;
+
     filterVec(floatVec3(sample), filteredSample, lowpassFilterCoeff);
     filterVec(filteredSample, g_gravity, gravityFilterCoeff);
     byteVec3 currentSample = byteVec3 { clampByte(sample.x-g_gravity.x),
                                         clampByte(sample.y-g_gravity.y),
                                         clampByte(sample.z-g_gravity.z) };
     
-    g_sampleDelay.addSample(currentSample); // TODO: maybe we should somehow associate the stats objects with the delay lines
+    // TODO: maybe we should somehow associate the stats objects with the delay lines
+    //       then we won't have to remember to add the stats.addSample() lines
+    g_sampleDelay.addSample(currentSample); 
     g_tapStats.addSample(currentSample);
     g_shakeThreshStats.addSample(currentSample);
     
@@ -211,9 +244,15 @@ int detectGesture()
         }
     }
 
+
     if(shouldCheckShake)
     {
         float shakePredVal = getShakePrediction();
+        // serialPrint("shake: ", shakePredVal);
+        //    float tmplDist = templateDistSq<16, 2>(shakeTemplate1, g_sampleDelay);
+        //    serialPrint("tmpl: ", tmplDist);
+        serialPrint("accel: ", g_sampleDelay.getDelayedSample(0));
+
         bool foundShake = shakeEventFilter.filterValue(shakePredVal);
         if(foundShake)
         {
