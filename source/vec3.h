@@ -18,6 +18,28 @@ struct vec3
         y = v.y;
         z = v.z;
     }
+
+    // math
+    void operator=(const vec3<T>& v)
+    {
+        x = v.x;
+        y = v.y;
+        z = v.z;
+    }
+
+    void operator+=(const vec3<T>& v)
+    {
+        x += v.x;
+        y += v.y;
+        z += v.z;
+    }
+
+    void operator-=(const vec3<T>& v)
+    {
+        x -= v.x;
+        y -= v.y;
+        z -= v.z;
+    }
 };
 
 // doofy accesor functions
@@ -96,8 +118,28 @@ float normSq(const vec3<T>& v)
     return dot(v,v);
 }
 
+// vector arithmetic
+
+template <typename T>
+vec3<T> operator+(const vec3<T>& a, const vec3<T>& b)
+{
+    return vec3<T>(a.x+b.x, a.y+b.y, a.z+b.z);
+}
+
 template <typename T>
 vec3<T> operator-(const vec3<T>& a, const vec3<T>& b)
 {
     return vec3<T>(a.x-b.x, a.y-b.y, a.z-b.z);
+}
+
+template <typename T>
+vec3<T> operator*(float a, const vec3<T>& b)
+{
+    return vec3<T>(a*b.x, a*b.y, a*b.z);
+}
+
+template <typename T>
+vec3<T> operator*(const vec3<T>& b, float a)
+{
+    return vec3<T>(a*b.x, a*b.y, a*b.z);
 }

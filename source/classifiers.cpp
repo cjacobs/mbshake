@@ -6,6 +6,8 @@
 #include "classifiers.h"
 #include "main.h"
 
+#include <array>
+
 // TODO:
 // * Maybe modulate the shake output slightly by the amount of energy? --- soft shakes
 //     return a very large prediction value --- often higher than a strong shake
@@ -51,6 +53,18 @@ runningStats<long, byteVec3, GetZ<int8_t>> g_tapStats(g_tapWindowSize, g_sampleD
 eventThresholdFilter tapEventFilter(tapGestureThreshold, tapEventCountThreshold);
 
 runningStats<float, byteVec3, GetMagSq<int8_t, float>> g_shakeThreshStats(meanBufferSize, g_sampleDelay);
+
+// IIR filters
+
+std::array<float, 0> zeroFilterCoeffs;
+std::array<float, 1> lowpassFilterACoeffs = {lowpassFilterCoeff};
+std::array<float, 1> gravityFilterACoeffs = {gravityFilterCoeff};
+
+/*
+// YIKES! just declaring this variable causes the micro:bit to die before starting to execute
+iir_filter<floatVec3, 0, 1> lowpassFilter(zeroFilterCoeffs, lowpassFilterACoeffs);
+iir_filter<floatVec3, 0, 1> gravityFilter(zeroFilterCoeffs, gravityFilterACoeffs);
+*/
 
 // TODO: quantize this to a short or something
 float g_meanDelay1Mem[meanBufferSize+1];
@@ -133,6 +147,7 @@ T sum(const T* buf, int len)
 
 void processSample(byteVec3 sample)
 {
+    //    /*
     floatVec3 filteredSample;
     filteredSample.x = sample.x;
     filteredSample.y = sample.y;
@@ -140,10 +155,21 @@ void processSample(byteVec3 sample)
 
     filterVec(floatVec3(sample), filteredSample, lowpassFilterCoeff);
     filterVec(filteredSample, g_gravity, gravityFilterCoeff);
+
+    /*/
+
+    floatVec3 filteredSample = lowpassFilter.filterSample(floatVec3(sample));
+    g_gravity = gravityFilter.filterSample(filteredSample);
+    */
+    
     byteVec3 currentSample = byteVec3 { clampByte(sample.x-g_gravity.x),
                                         clampByte(sample.y-g_gravity.y),
                                         clampByte(sample.z-g_gravity.z) };
     
+    if(buttonA())
+    {
+        serialPrint("a: ", currentSample);
+    }
     // TODO: maybe we should somehow associate the stats objects with the delay lines
     //       then we won't have to remember to add the stats.addSample() lines
     g_sampleDelay.addSample(currentSample); 

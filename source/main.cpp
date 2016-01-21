@@ -33,6 +33,19 @@ bool buttonB()
     return uBit.buttonB.isPressed();
 }
 
+void printFloat(float val)
+{
+    char minus[3] = "\0\0";
+    if(val < 0)
+    {
+        minus[0] = '-';
+        val = -val;
+    }
+    float frac = val - int(val);
+    printf("%s%d.%03d", minus, int(val), int(1000*frac));
+}
+
+
 void serialPrint(const char* str)
 {
     printf("%s\r\n", str);
@@ -73,6 +86,27 @@ void serialPrint(const char* label, const byteVec3& v)
 void serialPrint(const byteVec3& v)
 {
     printf("%d\t%d\t%d\r\n", v.x, v.y, v.z);
+}
+
+void serialPrint(const floatVec3& v)
+{
+    printFloat(v.x);
+    printf("\t");
+    printFloat(v.y);
+    printf("\t");
+    printFloat(v.z);
+    printf("\r\n");
+}
+
+void serialPrint(const char* label, const floatVec3& v)
+{
+    printf("%s", label);
+    printFloat(v.x);
+    printf("\t");
+    printFloat(v.y);
+    printf("\t");
+    printFloat(v.z);
+    printf("\r\n");
 }
 
 // Local code

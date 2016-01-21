@@ -40,3 +40,38 @@ size_t ring_buffer<T,N>::size() const
 {
     return arr_.size();
 }
+
+// specialization for zero-length buffer (which hopefully never happens)
+template <typename T>
+class ring_buffer<T,0>
+{
+public:
+    ring_buffer();
+    T operator[](int index) const;
+    void push_back(const T& val);
+    size_t size() const;
+};
+    
+template <typename T>
+ring_buffer<T,0>::ring_buffer()
+{
+}
+
+template <typename T>
+T ring_buffer<T,0>::operator[](int index) const
+{
+    //    static_assert(false);
+    return T();
+}
+
+template <typename T>
+void ring_buffer<T,0>::push_back(const T& val)
+{
+    //    static_assert(false);
+}
+
+template <typename T>
+size_t ring_buffer<T,0>::size() const
+{
+    return 0;
+}
