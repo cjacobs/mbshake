@@ -15,6 +15,8 @@ public:
 
 // the "Accessor" helper classes let you transform the input type S before casting it to type T.
 // Uses include extracting a single element from a vector (using e.g., the GetX accessor class)
+// An Accessor has a single static function get_val() that takes a value of type S and returns a value of type T
+//  (maybe we should call it a transformer...)
 template <typename T, typename S=T, typename Accessor=IdentityAccessor<S>>
 class runningStats
 {
