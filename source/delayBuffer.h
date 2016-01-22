@@ -1,6 +1,7 @@
 #pragma once
 #include "fastmath.h"
 
+// This is just a ring buffer... why not use it?
 template <typename T>
 class delayBuffer
 {

@@ -19,21 +19,21 @@ using std::abs;
 //     risks making transitory spikes last longer and be harder to filter out
 
 // Constants
-const float lowpassFilterCoeff = 0.9;
-const float gravityFilterCoeff = 0.05; // problem: gravity converges too slowly
+const float lowpassFilterCoeff = 0.9f;
+const float gravityFilterCoeff = 0.05f; // problem: gravity converges too slowly
 const int minLenThresh = 25; //150*150;
 
-const float shakeGestureThreshold = 0.65;
+const float shakeGestureThreshold = 0.65f;
 const int shakeEventCountThreshold = 3;
-const float shakeGateThreshSquared = 1600000;
+const float shakeGateThreshSquared = 1600000.0f;
 eventThresholdFilter<float> shakeEventFilter(shakeGestureThreshold, shakeEventCountThreshold);
 
-const float tapGestureThreshold = 1.7;
+const float tapGestureThreshold = 1.7f;
 const int tapEventCountThreshold = 1;
 
 const int g_tapWindowSize = 11;
-const float g_tapScaleDenominator = 2.5;
-const float tapGateThresh1 = 500; // variance of preceeding windown should be less than this
+const float g_tapScaleDenominator = 2.5f;
+const float tapGateThresh1 = 500.0f; // variance of preceeding windown should be less than this
 const int tapGateThresh2 = 120; // intensity of impulse should be greater than this
 const int g_tapK = 3;
 
@@ -48,7 +48,7 @@ const int delayBufferSize = 33;
 // TODO: half-phase delayed versions
 
 // Globals
-floatVec3 g_gravity = {0,0,0};
+floatVec3 g_gravity = {0, 0, 0};
 
 byteVec3 g_sampleDelayMem[delayBufferSize];
 delayBuffer<byteVec3> g_sampleDelay(g_sampleDelayMem, delayBufferSize);
@@ -58,16 +58,8 @@ eventThresholdFilter<float> tapEventFilter(tapGestureThreshold, tapEventCountThr
 runningStats<float, byteVec3, GetMagSq<int8_t, float>> g_shakeThreshStats(meanBufferSize, g_sampleDelay);
 
 // IIR filters
-
-std::array<float, 0> zeroFilterCoeffs;
-std::array<float, 1> lowpassFilterACoeffs = {lowpassFilterCoeff};
-std::array<float, 1> gravityFilterACoeffs = {gravityFilterCoeff};
-
-/*
-// YIKES! just declaring this variable causes the micro:bit to die before starting to execute
-iir_filter<floatVec3, 0, 1> lowpassFilter(zeroFilterCoeffs, lowpassFilterACoeffs);
-iir_filter<floatVec3, 0, 1> gravityFilter(zeroFilterCoeffs, gravityFilterACoeffs);
-*/
+iir_filter<floatVec3, 1, 1> lowpassFilter({ 1.0f-lowpassFilterCoeff }, { -lowpassFilterCoeff });
+iir_filter<floatVec3, 1, 1> gravityFilter({ 1.0f-gravityFilterCoeff }, { -gravityFilterCoeff });
 
 // TODO: quantize this to a short or something
 float g_meanDelay1Mem[meanBufferSize+1];
@@ -125,17 +117,6 @@ float templateDistSq(T* tmpl, delayBuffer<U>& signal)
     return result;
 }
 
-
-// TODO: use iirFilter object here
-void filterVec(const floatVec3& vec, floatVec3& prevVec, float alpha)
-{
-    prevVec.x += alpha*(vec.x - prevVec.x);
-    prevVec.y += alpha*(vec.y - prevVec.y);
-    prevVec.z += alpha*(vec.z - prevVec.z);
-}
-
-
-
 template <typename T>
 T sum(const T* buf, int len)
 {
@@ -150,7 +131,7 @@ T sum(const T* buf, int len)
 
 void processSample(byteVec3 sample)
 {
-    //    /*
+    /*
     floatVec3 filteredSample;
     filteredSample.x = sample.x;
     filteredSample.y = sample.y;
@@ -163,7 +144,7 @@ void processSample(byteVec3 sample)
 
     floatVec3 filteredSample = lowpassFilter.filterSample(floatVec3(sample));
     g_gravity = gravityFilter.filterSample(filteredSample);
-    */
+    // */
     
     byteVec3 currentSample = byteVec3 { clampByte(sample.x-g_gravity.x),
                                         clampByte(sample.y-g_gravity.y),
@@ -214,9 +195,9 @@ float getShakePrediction()
 
 float getTapPrediction()
 {
-  float val1 = g_sampleDelay.getDelayedSample(g_tapWindowSize/2).z - g_tapStats.getMean();
-  float val2 = g_sampleDelay.getDelayedSample(g_tapWindowSize/2 - 1).z - g_tapStats.getMean();
-  float val = val1 - 0.25*val2;
+  auto val1 = g_sampleDelay.getDelayedSample(g_tapWindowSize/2).z - g_tapStats.getMean();
+  auto val2 = g_sampleDelay.getDelayedSample(g_tapWindowSize/2 - 1).z - g_tapStats.getMean();
+  float val = val1 - 0.25f*val2;
   float std = g_tapStats.getStdDev();
   
   return val / (std + g_tapScaleDenominator);
@@ -280,7 +261,7 @@ int detectGesture()
         // serialPrint("shake: ", shakePredVal);
         //    float tmplDist = templateDistSq<16, 2>(shakeTemplate1, g_sampleDelay);
         //    serialPrint("tmpl: ", tmplDist);
-        serialPrint("accel: ", g_sampleDelay.getDelayedSample(0));
+        //serialPrint("accel: ", g_sampleDelay.getDelayedSample(0));
 
         bool foundShake = shakeEventFilter.filterValue(shakePredVal);
         if(foundShake)

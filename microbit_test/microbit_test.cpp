@@ -75,16 +75,18 @@ TEST_CASE("iirFilter")
 
     iir_filter<float, 2, 0> filt({0.5, 0.5}, {});
     vector<float> vals {10, 11, 12, 13, 14, 15, 16, 17, 18, 1, 2, 3, 4, 5};
-    filt.filterSample(1.0);
-    filt.filterSample(1.0);
-    filt.filterSample(1.0);
-    filt.filterSample(1.0);
+    x = filt.filterSample(1.0);
+    x = filt.filterSample(1.0);
+    x = filt.filterSample(1.0);
+    x = filt.filterSample(1.0);
     x = filt.filterSample(1.0);
     REQUIRE(x == Approx(1.0));
 
-    iir_filter<float, 0, 1> filt2({}, {0.5});
-    filt2.filterSample(1.0);
-    filt2.filterSample(0.0);
+    iir_filter<float, 1, 1> filt2({1.0}, {-0.5});
+    x = filt2.filterSample(1.0);
+    REQUIRE(x == 1.0);
+    x = filt2.filterSample(0.0);
+    REQUIRE(x == 0.5);
     x = filt2.filterSample(0.0);
     REQUIRE(x == 0.25);
 }

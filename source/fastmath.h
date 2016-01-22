@@ -5,7 +5,7 @@
 template <typename T>
 int8_t clampByte(const T& inVal)
 {
-    return inVal < -127 ? -127 : inVal > 128 ? 128 : inVal;
+    return inVal < -127 ? -127 : (int8_t)inVal > 128 ? 128 : (int8_t)inVal;
 }
 
 // from http://stackoverflow.com/a/19807644
@@ -57,7 +57,7 @@ class fixed_pt
 public:
     fixed_pt() : value_(0) {}
     fixed_pt(int val) : value_(val << Mbits) {}
-    fixed_pt(float val) : value_(val*(1 << Mbits)) {}
+    fixed_pt(float val) : value_(T(val * (1 << Mbits))) {}
     fixed_pt(const fixed_pt<T, Mbits>& x) : value_(x.value_) {}
     
     operator int()

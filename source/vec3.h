@@ -80,7 +80,7 @@ class GetMagSq
 public:
     static U get_val(const vec3<T>& vec)
     {
-        U temp = vec.x*vec.x + vec.y*vec.y + vec.z*vec.z;
+        U temp = U(vec.x*vec.x + vec.y*vec.y + vec.z*vec.z);
         return temp;
     }
 };
@@ -93,7 +93,7 @@ typedef vec3<float> floatVec3;
 template<typename T>
 float dot(const vec3<T>& a, const vec3<T>& b)
 {
-    return a.x*b.x + a.y*b.y + a.z*b.z;
+    return float(a.x*b.x + a.y*b.y + a.z*b.z);
 }
 
 template <typename T>

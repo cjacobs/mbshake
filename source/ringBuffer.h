@@ -20,6 +20,7 @@ private:
 template <typename T, int N>
 ring_buffer<T,N>::ring_buffer()
 {
+    arr_.fill(T());
 }
 
 template <typename T, int N>
@@ -61,16 +62,16 @@ ring_buffer<T,0>::ring_buffer()
 }
 
 template <typename T>
-T ring_buffer<T,0>::operator[](int index) const
+T ring_buffer<T,0>::operator[](int) const
 {
-    //    static_assert(false);
+//    static_assert(false, ":(");
     return T();
 }
 
 template <typename T>
-void ring_buffer<T,0>::push_back(const T& val)
+void ring_buffer<T,0>::push_back(const T&)
 {
-    //    static_assert(false);
+//    static_assert(false, ":(");
 }
 
 template <typename T>

@@ -50,13 +50,20 @@ public:
 
     float getVar()
     {
-        return (accumSumSq_ - (accumSum_*accumSum_/windowSize_)) / windowSize_;
+        return float(accumSumSq_ - (accumSum_*accumSum_/windowSize_)) / windowSize_;
     }
 
     float getStdDev()
     {
         return 1.0f / fast_inv_sqrt(getVar());
     }
+
+/*
+    T getMax()
+    {
+        // For this, we have to scan the whole buffer. :(
+    }
+    */
 
 private:
     int windowSize_ = 0;
