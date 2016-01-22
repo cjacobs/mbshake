@@ -73,11 +73,11 @@ TEST_CASE("ringBuffer test")
     }
 
     // Is this really what we want? Maybe fix it...
-    REQUIRE(ringBuf[-1] == 5);
-    REQUIRE(ringBuf[-2] == 4);
-    REQUIRE(ringBuf[-3] == 3);
-    REQUIRE(ringBuf[-4] == 2);
-    REQUIRE(ringBuf[-5] == 1);
+    REQUIRE(ringBuf[0] == 5);
+    REQUIRE(ringBuf[-1] == 4);
+    REQUIRE(ringBuf[-2] == 3);
+    REQUIRE(ringBuf[-3] == 2);
+    REQUIRE(ringBuf[-4] == 1);
 }
 
 //

@@ -23,7 +23,7 @@ const int minLenThresh = 25; //150*150;
 const float shakeGestureThreshold = 0.65;
 const int shakeEventCountThreshold = 3;
 const float shakeGateThreshSquared = 1600000;
-eventThresholdFilter shakeEventFilter(shakeGestureThreshold, shakeEventCountThreshold);
+eventThresholdFilter<float> shakeEventFilter(shakeGestureThreshold, shakeEventCountThreshold);
 
 const float tapGestureThreshold = 1.7;
 const int tapEventCountThreshold = 1;
@@ -50,7 +50,7 @@ floatVec3 g_gravity = {0,0,0};
 byteVec3 g_sampleDelayMem[delayBufferSize];
 delayBuffer<byteVec3> g_sampleDelay(g_sampleDelayMem, delayBufferSize);
 runningStats<long, byteVec3, GetZ<int8_t>> g_tapStats(g_tapWindowSize, g_sampleDelay);
-eventThresholdFilter tapEventFilter(tapGestureThreshold, tapEventCountThreshold);
+eventThresholdFilter<float> tapEventFilter(tapGestureThreshold, tapEventCountThreshold);
 
 runningStats<float, byteVec3, GetMagSq<int8_t, float>> g_shakeThreshStats(meanBufferSize, g_sampleDelay);
 

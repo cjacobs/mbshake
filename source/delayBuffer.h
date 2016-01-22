@@ -23,7 +23,9 @@ public:
     T getDelayedSample(int delay)
     {
         // need to ensure offset is positive
-        return buffer[(currentPos+2*bufLen-delay)%bufLen];
+        int index = (currentPos - delay) % bufLen;
+        if (index < 0) index += bufLen; // need to ensure offset is positive
+        return buffer[index];
     }
 
 private:

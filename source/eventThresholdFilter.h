@@ -1,16 +1,18 @@
 #pragma once
 
+template <typename T>
 class eventThresholdFilter
 {
 public:
-    eventThresholdFilter(float gestureThreshold, int eventCountThreshold) : count_(0), gestureThreshold_(gestureThreshold), eventCountThreshold_(eventCountThreshold) {};
-    bool filterValue(float value)
+    eventThresholdFilter(T gestureThreshold, int eventCountThreshold) : count_(0), gestureThreshold_(gestureThreshold), eventCountThreshold_(eventCountThreshold) {};
+    bool filterValue(T value)
     {
         if(value >= gestureThreshold_)
         {
             count_++;
             if (count_ >= eventCountThreshold_)
             {
+                count_ = eventCountThreshold_; // avoid overflow
                 return true;
             }
         }
@@ -28,7 +30,7 @@ public:
 
 private:
     int count_ = 0;
-    float gestureThreshold_;
+    T gestureThreshold_;
     int eventCountThreshold_;
 };
 

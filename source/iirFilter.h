@@ -6,9 +6,10 @@
 
 // M == len(a)
 // N == len(b)
+// a == coeffs on y_prev
+// b == coeffs on x_prev
 // pass in 'b' coeffs (the FIR coeffs) first. We're always assuming an initial 'a' coeff of 1.0, though
 // sum(a[i]*y[t-i]) = sum(b[i]*x[t-i])
-
 
 template <typename T, int N, int M>
 class iir_filter
@@ -50,8 +51,8 @@ T iir_filter<T,N,M>::filterSample(const T& x)
         y -= a_[index]*y_prev_[-index];
     }
 
-    x_prev_.push_back(x);
-    y_prev_.push_back(y);
+    if(N > 1) x_prev_.push_back(x);
+    if(M > 0) y_prev_.push_back(y);
 
     return y;
 }
