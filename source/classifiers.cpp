@@ -7,6 +7,9 @@
 #include "main.h"
 
 #include <array>
+#include <cmath>
+#include <cstdlib>
+using std::abs;
 
 // TODO:
 // * Maybe modulate the shake output slightly by the amount of energy? --- soft shakes

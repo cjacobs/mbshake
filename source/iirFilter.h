@@ -4,6 +4,8 @@
 #include <array>
 #include <algorithm>
 
+#include <iostream>
+
 // M == len(a)
 // N == len(b)
 // a == coeffs on y_prev
@@ -21,7 +23,7 @@ public:
 private:
     std::array<float, M> a_; // feedback (y) coefficients
     std::array<float, (N>0?N-1:0)> b_; // feed-forward (x) coefficients
-    float b0_; // first b coefficient (separate just to make code nicer in filterSample
+    float b0_ = 0; // first b coefficient (separate just to make code nicer in filterSample
 
     ring_buffer<T, M> y_prev_;
     ring_buffer<T, (N>0?N-1:0)> x_prev_;
@@ -34,23 +36,31 @@ template <typename T, int N, int M>
 iir_filter<T,N,M>::iir_filter(const std::array<float, N>& b, const std::array<float, M>& a)
 {
     a_ = a;
-    b0_ = b[0];
-    std::copy(b.begin()+1, b.end(), b_.begin());
+    if(N > 0)
+    {
+        b0_ = b[0];
+    }
+
+    if(N > 1)
+    {
+        std::copy(b.begin()+1, b.end(), b_.begin());
+    }
 }
 
 template <typename T, int N, int M>
 T iir_filter<T,N,M>::filterSample(const T& x)
 {
     T y = b0_*x;
-    for(int index = 0; index < b_.size()-1; index++)
+    for(int index = 0; index < b_.size(); index++)
     {
         y += b_[index]*x_prev_[-index];
     }
+
     for(int index = 0; index < a_.size(); index++)
     {
         y -= a_[index]*y_prev_[-index];
     }
-
+    
     if(N > 1) x_prev_.push_back(x);
     if(M > 0) y_prev_.push_back(y);
 

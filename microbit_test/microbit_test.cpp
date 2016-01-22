@@ -48,16 +48,46 @@ TEST_CASE("delayBuffer test")
 TEST_CASE("fast_inv_sqrt test")
 {
     vector<float> vals{ 1.1f, 2.2f, 100.1f, 500.5f, 1234.56f, 3456789.0f };
-
     for (auto v : vals)
     {
         REQUIRE(fast_inv_sqrt(v) == Approx(1.0 / sqrtf(v)).epsilon(0.001));
     }
 }
 
+TEST_CASE("fixed_pt test")
+{
+    fixed_pt<int16_t, 8> x = 3;
+    fixed_pt<int16_t, 8> y = 0.5f;
+    REQUIRE(int(x) == 3);
+    REQUIRE(float(x) == 3.0);
+    
+    REQUIRE(float(x+y) == 3.5);
+    REQUIRE(float(x*y) == 1.5);
+}
+
 //
 // iirFilter tests
 //
+
+TEST_CASE("iirFilter")
+{
+    float x = 0.0f;
+
+    iir_filter<float, 2, 0> filt({0.5, 0.5}, {});
+    vector<float> vals {10, 11, 12, 13, 14, 15, 16, 17, 18, 1, 2, 3, 4, 5};
+    filt.filterSample(1.0);
+    filt.filterSample(1.0);
+    filt.filterSample(1.0);
+    filt.filterSample(1.0);
+    x = filt.filterSample(1.0);
+    REQUIRE(x == Approx(1.0));
+
+    iir_filter<float, 0, 1> filt2({}, {0.5});
+    filt2.filterSample(1.0);
+    filt2.filterSample(0.0);
+    x = filt2.filterSample(0.0);
+    REQUIRE(x == 0.25);
+}
 
 //
 // ringBuffer tests

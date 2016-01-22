@@ -1,6 +1,6 @@
 #pragma once
 
-#include <stdint.h>
+#include <cstdint>
 
 template <typename T>
 int8_t clampByte(const T& inVal)
@@ -39,9 +39,12 @@ inline float fast_inv_sqrt(float val)
 
 	float x2 = val * 0.5F;
 	float y  = val;
-    long i  = alias_cast<long>(y);
+
+    int32_t i = alias_cast<long>(y);
     i  = 0x5f3759df - ( i >> 1 );
     y = alias_cast<float>(i);
+
+
 	y  = y * ( threehalfs - ( x2 * y * y ) );
 //	y  = y * ( threehalfs - ( x2 * y * y ) );
 
@@ -52,11 +55,62 @@ template <typename T, int Mbits>
 class fixed_pt
 {
 public:
+    fixed_pt() : value_(0) {}
     fixed_pt(int val) : value_(val << Mbits) {}
     fixed_pt(float val) : value_(val*(1 << Mbits)) {}
+    fixed_pt(const fixed_pt<T, Mbits>& x) : value_(x.value_) {}
+    
+    operator int()
+    {
+        return value_ >> Mbits;
+    }
+    
+    operator float()
+    {
+        return (float)value_ / (1 << Mbits);
+    }
 
     // TODO: arithmetic ops: +, -, *, / (?)
+    void operator+=(const fixed_pt& x)
+    {
+        value_ += x.value_;
+    }
+    
+    void operator-=(const fixed_pt& x)
+    {
+        value_ -= x.value_;
+    }
+    
+    void operator*=(const fixed_pt& x)
+    {
+        value_ = (value_*x.value_) >> Mbits;
+    }
+    
+    fixed_pt<T, Mbits> operator +(const fixed_pt<T, Mbits>& b)
+    {
+        fixed_pt<T, Mbits> result(*this);
+        result += b;
+        return result;
+    }
+
+    fixed_pt<T, Mbits> operator -(const fixed_pt<T, Mbits>& b)
+    {
+        fixed_pt<T, Mbits> result(*this);
+        result -= b;
+        return result;
+    }
+
+    fixed_pt<T, Mbits> operator *(const fixed_pt<T, Mbits>& b)
+    {
+        fixed_pt<T, Mbits> result(*this);
+        result *= b;
+        return result;
+    }
 
 private:
+    friend fixed_pt operator+(const fixed_pt& a, const fixed_pt& b);
+    fixed_pt(T val, bool) : value_(val) {}
     T value_;
 };
+
+typedef fixed_pt<int16_t,8> fixed_16;
