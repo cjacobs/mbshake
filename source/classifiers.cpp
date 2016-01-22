@@ -50,26 +50,26 @@ const int delayBufferSize = 33;
 // Globals
 floatVec3 g_gravity = {0, 0, 0};
 
-byteVec3 g_sampleDelayMem[delayBufferSize];
-delayBuffer<byteVec3> g_sampleDelay(g_sampleDelayMem, delayBufferSize);
-runningStats<long, byteVec3, GetZ<int8_t>> g_tapStats(g_tapWindowSize, g_sampleDelay);
+//byteVec3 g_sampleDelayMem[delayBufferSize];
+delayBuffer<byteVec3, delayBufferSize> g_sampleDelay; //(g_sampleDelayMem, delayBufferSize);
+runningStats<g_tapWindowSize, delayBufferSize, long, byteVec3, GetZ<int8_t>> g_tapStats(g_sampleDelay);
 eventThresholdFilter<float> tapEventFilter(tapGestureThreshold, tapEventCountThreshold);
 
-runningStats<float, byteVec3, GetMagSq<int8_t, float>> g_shakeThreshStats(meanBufferSize, g_sampleDelay);
+runningStats<meanBufferSize, delayBufferSize, float, byteVec3, GetMagSq<int8_t, float>> g_shakeThreshStats(g_sampleDelay);
 
 // IIR filters
 iir_filter<floatVec3, 1, 1> lowpassFilter({ 1.0f-lowpassFilterCoeff }, { -lowpassFilterCoeff });
 iir_filter<floatVec3, 1, 1> gravityFilter({ 1.0f-gravityFilterCoeff }, { -gravityFilterCoeff });
 
 // TODO: quantize this to a short or something
-float g_meanDelay1Mem[meanBufferSize+1];
-delayBuffer<float> g_meanDelay1(g_meanDelay1Mem, meanBufferSize+1);
-runningStats<float> g_delayDot1Stats(meanBufferSize, g_meanDelay1);
+//float g_meanDelay1Mem[meanBufferSize+1];
+delayBuffer<float, meanBufferSize + 1> g_meanDelay1; //(g_meanDelay1Mem, meanBufferSize + 1);
+runningStats<meanBufferSize, meanBufferSize+1, float> g_delayDot1Stats(g_meanDelay1);
 
 // TODO: quantize this to a short or something
-float g_meanDelay2Mem[meanBufferSize+1];
-delayBuffer<float> g_meanDelay2(g_meanDelay2Mem, meanBufferSize+1);
-runningStats<float> g_delayDot2Stats(meanBufferSize, g_meanDelay2);
+//float g_meanDelay2Mem[meanBufferSize+1];
+delayBuffer<float, meanBufferSize + 1> g_meanDelay2; //(g_meanDelay2Mem, meanBufferSize + 1);
+runningStats<meanBufferSize, meanBufferSize+1, float> g_delayDot2Stats(g_meanDelay2);
 
 
 int g_tapCountdown1 = 0;
@@ -104,7 +104,7 @@ const byteVec3 shakeTemplate1[] = {{ -10,    7,  -91},
 
 // Note: tmpl should be time-reversed
 template <int N, int ResampleRate, typename T, typename U>
-float templateDistSq(T* tmpl, delayBuffer<U>& signal)
+float templateDistSq(T* tmpl, delayBuffer<U, N>& signal)
 {
     // TODO: can probably do all the following with template metaprogramming if we really care
     float result;
@@ -150,10 +150,6 @@ void processSample(byteVec3 sample)
                                         clampByte(sample.y-g_gravity.y),
                                         clampByte(sample.z-g_gravity.z) };
     
-    if(buttonA())
-    {
-        serialPrint("a: ", currentSample);
-    }
     // TODO: maybe we should somehow associate the stats objects with the delay lines
     //       then we won't have to remember to add the stats.addSample() lines
     g_sampleDelay.addSample(currentSample); 
@@ -190,6 +186,10 @@ void processSample(byteVec3 sample)
 
 float getShakePrediction()
 {    
+    if (buttonA())
+    {
+        serialPrint("1: ", g_delayDot1Stats.getMean());
+    }
     return std::max(g_delayDot1Stats.getMean(), g_delayDot2Stats.getMean());
 }
 

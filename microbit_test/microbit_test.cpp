@@ -27,8 +27,8 @@ TEST_CASE("delayBuffer test")
 {
     vector<float> vals{ 10, 11, 12, 13, 14, 15, 16, 17, 18, 1, 2, 3, 4, 5 };
 
-    float delayBufferMem[5];
-    delayBuffer<float> delayBuf(delayBufferMem, 5);
+//    float delayBufferMem[5];
+    delayBuffer<float, 5> delayBuf; //(delayBufferMem, 5);
     for (auto v : vals)
     {
         delayBuf.addSample(v);
@@ -119,9 +119,9 @@ TEST_CASE("ringBuffer test")
 TEST_CASE("runningStats test")
 {
     vector<float> vals{ 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16 };
-    float delayBufferMem[5];
-    delayBuffer<float> delayBuf(delayBufferMem, 5); // ERROR(?) size of delayBuf must be one more than runningStats
-    runningStats<float> stats(4, delayBuf);
+//    float delayBufferMem[5];
+    delayBuffer<float, 5> delayBuf; //(delayBufferMem, 5); // ERROR(?) size of delayBuf must be one more than runningStats
+    runningStats<4, 5, float> stats(delayBuf);
 
     for (int index = 0; index < 4; index++)
     {

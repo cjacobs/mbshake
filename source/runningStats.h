@@ -17,11 +17,11 @@ public:
 // Uses include extracting a single element from a vector (using e.g., the GetX accessor class)
 // An Accessor has a single static function get_val() that takes a value of type S and returns a value of type T
 //  (maybe we should call it a transformer...)
-template <typename T, typename S=T, typename Accessor=IdentityAccessor<S>>
+template <int WindowSize, int BufferSize, typename T, typename S=T, typename Accessor=IdentityAccessor<S>>
 class runningStats
 {
 public:
-    runningStats(int windowSize, delayBuffer<S>& delayLine) : windowSize_(windowSize), delayLine_(delayLine)
+    runningStats(delayBuffer<S, BufferSize>& delayLine) : delayLine_(delayLine)
     {
     }
 
@@ -66,8 +66,8 @@ public:
     */
 
 private:
-    int windowSize_ = 0;
-    delayBuffer<S>& delayLine_;
+    const int windowSize_ = WindowSize;
+    delayBuffer<S, BufferSize>& delayLine_;
 
     T accumSum_ = 0;
     T accumSumSq_ = 0;
