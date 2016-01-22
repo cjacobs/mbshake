@@ -27,7 +27,7 @@ template <typename T, int N>
 T ring_buffer<T,N>::operator[](int index) const
 {
     // allow negative indices
-    index = (index+curr_pos_) % arr_.size();
+    index = (index + curr_pos_) % (int)arr_.size(); // yikes! need to cast size to signed value, otherwise % behaves differently
     if (index < 0) index += arr_.size();
     return arr_[index];
 }
