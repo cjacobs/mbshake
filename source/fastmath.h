@@ -108,7 +108,6 @@ public:
     }
 
 private:
-    friend fixed_pt operator+(const fixed_pt& a, const fixed_pt& b);
     fixed_pt(T val, bool) : value_(val) {}
     T value_;
 };
