@@ -150,10 +150,6 @@ void processSample(byteVec3 sample)
                                         clampByte(sample.y-g_gravity.y),
                                         clampByte(sample.z-g_gravity.z) };
     
-    if(buttonA())
-    {
-        serialPrint("a: ", currentSample);
-    }
     // TODO: maybe we should somehow associate the stats objects with the delay lines
     //       then we won't have to remember to add the stats.addSample() lines
     g_sampleDelay.addSample(currentSample); 
@@ -186,6 +182,12 @@ void processSample(byteVec3 sample)
         g_meanDelay2.addSample(0.0);
         g_delayDot2Stats.addSample(0.0);
     }
+
+    if(buttonA())
+    {
+        serialPrintLn(systemTime(), " : ", currentSample, " - ", g_tapStats.getVar());
+    }
+
 }
 
 float getShakePrediction()

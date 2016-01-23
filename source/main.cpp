@@ -45,20 +45,24 @@ void printFloat(float val)
     printf("%s%d.%03d", minus, int(val), int(1000*frac));
 }
 
-
 void serialPrint(const char* str)
 {
-    printf("%s\r\n", str);
+    printf("%s", str);
 }
 
 void serialPrint(const char* label, int val)
 {
-    printf("%s%d\r\n", label, val);
+    printf("%s%d", label, val);
 }
 
 void serialPrint(int val)
 {
-    printf("%d\r\n", val);
+    printf("%d", val);
+}
+
+void serialPrint(unsigned long val)
+{
+    printf("%lu", val);
 }
 
 void serialPrint(const char* label, float val)
@@ -70,7 +74,7 @@ void serialPrint(const char* label, float val)
         val = -val;
     }
     float frac = val - int(val);
-    printf("%s%s%d.%03d\r\n", label, minus, int(val), int(1000*frac));
+    printf("%s%s%d.%03d", label, minus, int(val), int(1000*frac));
 }
 
 void serialPrint(float val)
@@ -80,12 +84,12 @@ void serialPrint(float val)
 
 void serialPrint(const char* label, const byteVec3& v)
 {
-    printf("%s%d\t%d\t%d\r\n", label, v.x, v.y, v.z);
+    printf("%s%d\t%d\t%d", label, v.x, v.y, v.z);
 }
 
 void serialPrint(const byteVec3& v)
 {
-    printf("%d\t%d\t%d\r\n", v.x, v.y, v.z);
+    printf("%d\t%d\t%d", v.x, v.y, v.z);
 }
 
 void serialPrint(const floatVec3& v)
@@ -95,7 +99,7 @@ void serialPrint(const floatVec3& v)
     printFloat(v.y);
     printf("\t");
     printFloat(v.z);
-    printf("\r\n");
+    printf("");
 }
 
 void serialPrint(const char* label, const floatVec3& v)
@@ -106,7 +110,12 @@ void serialPrint(const char* label, const floatVec3& v)
     printFloat(v.y);
     printf("\t");
     printFloat(v.z);
-    printf("\r\n");
+    printf("");
+}
+
+unsigned long systemTime()
+{
+    return uBit.systemTime();
 }
 
 // Local code
