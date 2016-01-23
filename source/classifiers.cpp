@@ -234,18 +234,11 @@ void processSample(byteVec3 sample)
             g_delayDot4Stats.addSample(0.0);
         }
 
-    }
-
-    if (buttonA())
-    {
-//        serialPrint("a: ", g_lastRawSample); // g_sampleDelay.getDelayedSample(0));
-    }
-
     if(buttonA())
     {
         serialPrintLn(systemTime(), " : ", currentSample, " - ", g_tapStats.getVar());
-    }
 
+    }
 }
 
 float getShakePrediction()
