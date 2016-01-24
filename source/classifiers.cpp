@@ -19,50 +19,63 @@ using std::max;
 // * Maybe use max over some window instead of mean for shake pred value? (though this
 //     risks making transitory spikes last longer and be harder to filter out
 
+// TODO: half-phase delayed versions?
+
 // Constants
 const float lowpassFilterCoeff = 0.9f;
 const float gravityFilterCoeff = 0.05f; // problem: gravity converges too slowly (?)
 const int minLenThresh = 25; //150*150;
 
-const float shakeGestureThreshold = 0.65f;
-const int shakeEventCountThreshold = 3;
-const float shakeGateThreshSquared = 8000000.0f;
-//const float shakeGateThreshSquared = 1600000.0f;
+const float shakeGestureThreshold = 0.75f;
+const int shakeEventCountThreshold = 5;
+const float shakeGateThreshSquared = 4000000.0f;
 eventThresholdFilter<float> shakeEventFilter(shakeGestureThreshold, shakeEventCountThreshold);
 
-const float tapGestureThreshold = 1.7f;
+// Tap stuff
+const float tapGestureThreshold = 900.0f; // TODO: this can be an int
 const int tapEventCountThreshold = 1;
 
-const int g_tapWindowSize = 11;
+const int g_tapLargeWindowSize = 11;
+const int g_tapImpulseWindowSize = 2;
 const float g_tapScaleDenominator = 2.5f;
-const float tapGateThresh1 = 500.0f; // variance of preceeding windown should be less than this
-const int tapGateThresh2 = 120; // intensity of impulse should be greater than this
+const float tapGateThresh1 = 12.0f; // variance of preceeding windown should be less than this
+const int tapGateThresh2 = 10; // intensity of impulse should be greater than this
 const int g_tapK = 3;
 
-const int meanBufferSize = 8;
+const int shakeStatsBufferSize = 10;
 
 const int dotWavelength1 = 5;
-const int dotWavelength2 = 7;
-const int dotWavelength3 = 6;
+const int dotWavelength2 = 6;
+const int dotWavelength3 = 7;
 const int dotWavelength4 = 8;
 
-// const int delayBufferSize = 2*(dotWavelength2) + meanBufferSize;
-const int delayBufferSize = 33;
+// const int delayBufferSize = 2*(dotWavelength2) + shakeStatsBufferSize;
+const int delayBufferSize = 33; // TODO: eventually find correct minimum size here
 
-// TODO: half-phase delayed versions?
 
 // Globals
 floatVec3 g_gravity = {0, 0, 0};
 
-delayBuffer<byteVec3, delayBufferSize> g_sampleDelay;
-runningStats<g_tapWindowSize, delayBufferSize, long, byteVec3, GetZ<int8_t>> g_tapStats(g_sampleDelay);
-eventThresholdFilter<float> tapEventFilter(tapGestureThreshold, tapEventCountThreshold);
-
-runningStats<meanBufferSize, delayBufferSize, float, byteVec3, GetMagSq<int8_t, float>> g_shakeThreshStats(g_sampleDelay);
-
-// IIR filters
+// filters
+// TODO: make simple_iir_filter for single-pole filter
 iir_filter<floatVec3, 1, 1> lowpassFilter({ 1.0f-lowpassFilterCoeff }, { -lowpassFilterCoeff });
 iir_filter<floatVec3, 1, 1> gravityFilter({ 1.0f-gravityFilterCoeff }, { -gravityFilterCoeff });
+
+// Global delay buffer for filtered, gravity-subtracted accel input
+delayBuffer<byteVec3, delayBufferSize> g_sampleDelay;
+
+// Tap gesture stats
+// windowed statistics for detecting quiet area before tap
+runningStats<g_tapLargeWindowSize, delayBufferSize, long, byteVec3, GetZ<int8_t>> g_tapLargeWindowStats(g_sampleDelay);
+
+// windowed statistics for detecting high-Z-energy area during tap
+runningStats<g_tapImpulseWindowSize, delayBufferSize, long, byteVec3, GetZ<int8_t>> g_tapImpulseWindowStats(g_sampleDelay);
+
+eventThresholdFilter<float> tapEventFilter(tapGestureThreshold, tapEventCountThreshold);
+
+// Shake gesture stats
+runningStats<shakeStatsBufferSize, delayBufferSize, float, byteVec3, GetMagSq<int8_t, float>> g_shakeThreshStats(g_sampleDelay);
+
 
 // TODO: quantize these to shorts or something
 delayBuffer<float, dotWavelength1 + 1> g_meanDelay1;
@@ -148,6 +161,7 @@ void processDotFeature(const byteVec3& currentSample, int dotWavelength, MeanDel
     }
 }
 
+float getShakePrediction();
 
 byteVec3 g_lastRawSample;
 void processSample(byteVec3 sample)
@@ -171,7 +185,8 @@ void processSample(byteVec3 sample)
     // TODO: maybe we should somehow associate the stats objects with the delay lines
     //       then we won't have to remember to add the stats.addSample() lines
     g_sampleDelay.addSample(currentSample); 
-    g_tapStats.addSample(currentSample);
+    g_tapLargeWindowStats.addSample(currentSample);
+    g_tapImpulseWindowStats.addSample(currentSample);
     g_shakeThreshStats.addSample(currentSample);
     
     // now add val to mean buffer
@@ -184,7 +199,7 @@ void processSample(byteVec3 sample)
     {
         float dot1a = dotNorm(currentSample, g_sampleDelay.getDelayedSample(dotWavelength1), minLenThresh);
         float dot1b = dotNorm(currentSample, g_sampleDelay.getDelayedSample(2 * dotWavelength1), minLenThresh);
-        if (dot1a < 0 && dot1b > 0)
+        if (true) //(dot1a < 0 && dot1b > 0)
         {
             g_meanDelay1.addSample(dot1b - dot1a);
             g_delayDot1Stats.addSample(dot1b - dot1a);
@@ -197,7 +212,7 @@ void processSample(byteVec3 sample)
 
         float dot2a = dotNorm(currentSample, g_sampleDelay.getDelayedSample(dotWavelength2), minLenThresh);
         float dot2b = dotNorm(currentSample, g_sampleDelay.getDelayedSample(2 * dotWavelength2), minLenThresh);
-        if (dot2a < 0 && dot2b > 0)
+        if (true) // (dot2a < 0 && dot2b > 0)
         {
             g_meanDelay2.addSample(dot2b - dot2a);
             g_delayDot2Stats.addSample(dot2b - dot2a);
@@ -210,7 +225,7 @@ void processSample(byteVec3 sample)
 
         float dot3a = dotNorm(currentSample, g_sampleDelay.getDelayedSample(dotWavelength3), minLenThresh);
         float dot3b = dotNorm(currentSample, g_sampleDelay.getDelayedSample(2 * dotWavelength3), minLenThresh);
-        if (dot3a < 0 && dot3b > 0)
+        if (true) // (dot3a < 0 && dot3b > 0)
         {
             g_meanDelay3.addSample(dot3b - dot3a);
             g_delayDot3Stats.addSample(dot3b - dot3a);
@@ -223,7 +238,7 @@ void processSample(byteVec3 sample)
 
         float dot4a = dotNorm(currentSample, g_sampleDelay.getDelayedSample(dotWavelength4), minLenThresh);
         float dot4b = dotNorm(currentSample, g_sampleDelay.getDelayedSample(2 * dotWavelength4), minLenThresh);
-        if (dot4a < 0 && dot4b > 0)
+        if (true) // (dot4a < 0 && dot4b > 0)
         {
             g_meanDelay3.addSample(dot4b - dot4a);
             g_delayDot3Stats.addSample(dot4b - dot4a);
@@ -233,10 +248,13 @@ void processSample(byteVec3 sample)
             g_meanDelay4.addSample(0.0);
             g_delayDot4Stats.addSample(0.0);
         }
+    }
 
     if(buttonA())
     {
-        serialPrintLn(systemTime(), " : ", currentSample, " - ", g_tapStats.getVar());
+        //        serialPrintLn(systemTime(), " : ", currentSample, " - ", g_tapLargeWindowStats.getVar(), ", ", g_tapImpulseWindowStats.getVar());
+        serialPrintLn(systemTime(), " : ", currentSample, " :: ", g_delayDot1Stats.getMean(), ", ", g_delayDot2Stats.getMean(), " :: ", 
+                      getShakePrediction(), (g_shakeThreshStats.getVar() > shakeGateThreshSquared) ? " ##" : "  ");
 
     }
 }
@@ -250,12 +268,7 @@ float getShakePrediction()
 
 float getTapPrediction()
 {
-  auto val1 = g_sampleDelay.getDelayedSample(g_tapWindowSize/2).z - g_tapStats.getMean();
-  auto val2 = g_sampleDelay.getDelayedSample(g_tapWindowSize/2 - 1).z - g_tapStats.getMean();
-  float val = val1 - 0.25f*val2;
-  float std = g_tapStats.getStdDev();
-  
-  return val / (std + g_tapScaleDenominator);
+    return g_tapImpulseWindowStats.getVar();
 }
 
 
@@ -275,11 +288,11 @@ int detectGesture()
     bool shouldCheckShake = g_shakeThreshStats.getVar() > shakeGateThreshSquared;
 
     // criterion 1: look for 5 samples worth of quiet
-    float tapVar = g_tapStats.getVar();
+    float tapVar = g_tapLargeWindowStats.getVar();
 
     if (tapVar <= tapGateThresh1)
     {
-        g_tapCountdown1 = g_tapWindowSize + g_tapK;
+        g_tapCountdown1 = g_tapLargeWindowSize + g_tapK;
     }
     else if(g_tapCountdown1 > 0)
     {
@@ -289,7 +302,7 @@ int detectGesture()
     int zDiff = abs(sample.z - g_sampleDelay.getDelayedSample(2).z);
     if (zDiff >= tapGateThresh2)
     {
-        g_tapCountdown2 = (g_tapWindowSize/2) + g_tapK;
+        g_tapCountdown2 = (g_tapLargeWindowSize/2) + g_tapK;
     }
     else if(g_tapCountdown2 > 0)
     {
@@ -320,6 +333,7 @@ int detectGesture()
         bool foundShake = shakeEventFilter.filterValue(shakePredVal);
         if(foundShake)
         {
+            serialPrintLn("####");
             tapEventFilter.reset();
             return MICROBIT_ACCELEROMETER_SHAKE;
         }
