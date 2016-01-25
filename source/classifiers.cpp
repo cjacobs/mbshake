@@ -26,7 +26,7 @@ const float lowpassFilterCoeff = 0.9f;
 const float gravityFilterCoeff = 0.05f; // problem: gravity converges too slowly (?)
 const int minLenThresh = 25; //150*150;
 
-const float shakeGestureThreshold = 0.75f;
+const float shakeGestureThreshold = 0.65f;
 const int shakeEventCountThreshold = 5;
 const float shakeGateThreshSquared = 4000000.0f;
 eventThresholdFilter<float> shakeEventFilter(shakeGestureThreshold, shakeEventCountThreshold);
@@ -47,7 +47,7 @@ const int shakeStatsBufferSize = 10;
 const int dotWavelength1 = 5;
 const int dotWavelength2 = 6;
 const int dotWavelength3 = 7;
-const int dotWavelength4 = 8;
+const int dotWavelength4 = 4;
 
 // const int delayBufferSize = 2*(dotWavelength2) + shakeStatsBufferSize;
 const int delayBufferSize = 33; // TODO: eventually find correct minimum size here
@@ -252,7 +252,6 @@ void processSample(byteVec3 sample)
 
     if(buttonA())
     {
-        //        serialPrintLn(systemTime(), " : ", currentSample, " - ", g_tapLargeWindowStats.getVar(), ", ", g_tapImpulseWindowStats.getVar());
         serialPrintLn(systemTime(), " : ", currentSample, " :: ", g_delayDot1Stats.getMean(), ", ", g_delayDot2Stats.getMean(), " :: ", 
                       getShakePrediction(), (g_shakeThreshStats.getVar() > shakeGateThreshSquared) ? " ##" : "  ");
 
@@ -333,7 +332,7 @@ int detectGesture()
         bool foundShake = shakeEventFilter.filterValue(shakePredVal);
         if(foundShake)
         {
-            serialPrintLn("####");
+            if(buttonA()) serialPrintLn("####");
             tapEventFilter.reset();
             return MICROBIT_ACCELEROMETER_SHAKE;
         }

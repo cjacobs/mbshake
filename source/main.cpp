@@ -4,7 +4,7 @@
 
 // Constants
 const int sampleRate = 18; // in ms
-const int eventDisplayPeriod = 18; //250; // ms
+const int eventDisplayPeriod = 50; // 18;
 
 // Globals
 unsigned long g_prevTime = 0;
