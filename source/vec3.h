@@ -42,6 +42,33 @@ struct vec3
     }
 };
 
+
+// vector arithmetic
+
+template <typename T>
+vec3<T> operator+(const vec3<T>& a, const vec3<T>& b)
+{
+    return vec3<T>(a.x+b.x, a.y+b.y, a.z+b.z);
+}
+
+template <typename T>
+vec3<T> operator-(const vec3<T>& a, const vec3<T>& b)
+{
+    return vec3<T>(a.x-b.x, a.y-b.y, a.z-b.z);
+}
+
+template <typename T>
+vec3<T> operator*(float a, const vec3<T>& b)
+{
+    return vec3<T>(a*b.x, a*b.y, a*b.z);
+}
+
+template <typename T>
+vec3<T> operator*(const vec3<T>& b, float a)
+{
+    return vec3<T>(a*b.x, a*b.y, a*b.z);
+}
+
 // doofy accesor functions
 
 template <typename T>
@@ -97,9 +124,20 @@ float dot(const vec3<T>& a, const vec3<T>& b)
 }
 
 template <typename T>
-float dotNorm(const vec3<T>& a, const vec3<T>& b, int minLenThresh)
+float normSq(const vec3<T>& v)
 {
-    float val = dot(a,b);
+    return dot(v,v);
+}
+
+template <typename T>
+float norm(const vec3<T>& v)
+{
+    return 1.0 / fast_inv_sqrt(normSq(v));
+}
+
+template <typename T>
+float dotNorm(const vec3<T>& a, const vec3<T>& b, float minLenThresh)
+{
     float aLenSq = dot(a,a);
     float bLenSq = dot(b,b);
 
@@ -108,38 +146,25 @@ float dotNorm(const vec3<T>& a, const vec3<T>& b, int minLenThresh)
         return 0;
     }
 
-    //    return val / (sqrt(aLenSq)*sqrt(bLenSq));
-    return val * fast_inv_sqrt(aLenSq) * fast_inv_sqrt(bLenSq);
+    float bdota = dot(a,b);
+    return bdota * fast_inv_sqrt(aLenSq) * fast_inv_sqrt(bLenSq);
 }
 
 template <typename T>
-float normSq(const vec3<T>& v)
+float perpNorm(const vec3<T>& a, const vec3<T>& b, float minLenThresh)
 {
-    return dot(v,v);
+    float aLenSq = dot(a,a);
+    float bLenSq = dot(b,b);
+
+    if (aLenSq < minLenThresh || bLenSq < minLenThresh)
+    {
+        return 0;
+    }
+
+    float bdota = dot(a,b);
+    float bPerpScale = bdota / aLenSq;
+    floatVec3 bPerpVec = (floatVec3(b) - bPerpScale * floatVec3(a)) * fast_inv_sqrt(bLenSq);
+
+    return norm(bPerpVec); // this could surely be faster
 }
 
-// vector arithmetic
-
-template <typename T>
-vec3<T> operator+(const vec3<T>& a, const vec3<T>& b)
-{
-    return vec3<T>(a.x+b.x, a.y+b.y, a.z+b.z);
-}
-
-template <typename T>
-vec3<T> operator-(const vec3<T>& a, const vec3<T>& b)
-{
-    return vec3<T>(a.x-b.x, a.y-b.y, a.z-b.z);
-}
-
-template <typename T>
-vec3<T> operator*(float a, const vec3<T>& b)
-{
-    return vec3<T>(a*b.x, a*b.y, a*b.z);
-}
-
-template <typename T>
-vec3<T> operator*(const vec3<T>& b, float a)
-{
-    return vec3<T>(a*b.x, a*b.y, a*b.z);
-}

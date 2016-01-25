@@ -32,7 +32,7 @@ const float shakeGateThreshSquared = 4000000.0f;
 eventThresholdFilter<float> shakeEventFilter(shakeGestureThreshold, shakeEventCountThreshold);
 
 // Tap stuff
-const float tapGestureThreshold = 900.0f; // TODO: this can be an int
+const float tapGestureThreshold = 350.0f; // TODO: this can be an int
 const int tapEventCountThreshold = 1;
 
 const int g_tapLargeWindowSize = 11;
@@ -78,17 +78,24 @@ runningStats<shakeStatsBufferSize, delayBufferSize, float, byteVec3, GetMagSq<in
 
 
 // TODO: quantize these to shorts or something
-delayBuffer<float, dotWavelength1 + 1> g_meanDelay1;
-auto g_delayDot1Stats = make_stats(g_meanDelay1);
+delayBuffer<float, dotWavelength1 + 1> g_dotDelay1;
+auto g_delayDot1Stats = make_stats(g_dotDelay1);
 
-delayBuffer<float, dotWavelength2 + 1> g_meanDelay2;
-auto g_delayDot2Stats = make_stats(g_meanDelay2);
+delayBuffer<float, dotWavelength2 + 1> g_dotDelay2;
+auto g_delayDot2Stats = make_stats(g_dotDelay2);
 
-delayBuffer<float, dotWavelength3 + 1> g_meanDelay3;
-auto g_delayDot3Stats = make_stats(g_meanDelay3);
+delayBuffer<float, dotWavelength3 + 1> g_dotDelay3;
+auto g_delayDot3Stats = make_stats(g_dotDelay3);
 
-delayBuffer<float, dotWavelength4 + 1> g_meanDelay4;
-auto g_delayDot4Stats = make_stats(g_meanDelay4);
+delayBuffer<float, dotWavelength4 + 1> g_dotDelay4;
+auto g_delayDot4Stats = make_stats(g_dotDelay4);
+
+
+// perp delay
+delayBuffer<float, dotWavelength1 + 1> g_perpDelay1;
+auto g_delayPerp1Stats = make_stats(g_perpDelay1);
+
+
 
 int g_tapCountdown1 = 0;
 int g_tapCountdown2 = 0;
@@ -144,12 +151,13 @@ T sum(const T* buf, int len)
 }
 
 
+// For some reason, this kills the micro:bit for a while
 template<typename MeanDelayType, typename MeanStatsType>
-void processDotFeature(const byteVec3& currentSample, int dotWavelength, MeanDelayType& meanDelay, MeanStatsType delayDotStats)
+void processDotFeature(const byteVec3& currentSample, int dotWavelength, MeanDelayType& meanDelay, MeanStatsType& delayDotStats)
 {
     float dot1a = dotNorm(currentSample, g_sampleDelay.getDelayedSample(dotWavelength), minLenThresh);
     float dot1b = dotNorm(currentSample, g_sampleDelay.getDelayedSample(2 * dotWavelength), minLenThresh);
-    if (dot1a < 0 && dot1b > 0)
+    if (true) // (dot1a < 0 && dot1b > 0)
     {
         meanDelay.addSample(dot1b - dot1a);
         delayDotStats.addSample(dot1b - dot1a);
@@ -162,6 +170,7 @@ void processDotFeature(const byteVec3& currentSample, int dotWavelength, MeanDel
 }
 
 float getShakePrediction();
+float getTapPrediction();
 
 byteVec3 g_lastRawSample;
 void processSample(byteVec3 sample)
@@ -190,23 +199,32 @@ void processSample(byteVec3 sample)
     g_shakeThreshStats.addSample(currentSample);
     
     // now add val to mean buffer
-    if (buttonB())
+    if (!buttonB())
     {
-        processDotFeature(currentSample, dotWavelength1, g_meanDelay1, g_delayDot1Stats);
-        processDotFeature(currentSample, dotWavelength2, g_meanDelay2, g_delayDot2Stats);
+        processDotFeature(currentSample, dotWavelength1, g_dotDelay1, g_delayDot1Stats);
+        processDotFeature(currentSample, dotWavelength2, g_dotDelay2, g_delayDot2Stats);
+        processDotFeature(currentSample, dotWavelength3, g_dotDelay3, g_delayDot3Stats);
+        processDotFeature(currentSample, dotWavelength4, g_dotDelay4, g_delayDot4Stats);
     }
     else
     {
         float dot1a = dotNorm(currentSample, g_sampleDelay.getDelayedSample(dotWavelength1), minLenThresh);
         float dot1b = dotNorm(currentSample, g_sampleDelay.getDelayedSample(2 * dotWavelength1), minLenThresh);
+        float perp1a = perpNorm(currentSample, g_sampleDelay.getDelayedSample(dotWavelength1), minLenThresh);
+        float perp1b = perpNorm(currentSample, g_sampleDelay.getDelayedSample(2 * dotWavelength1), minLenThresh);
+
+
         if (true) //(dot1a < 0 && dot1b > 0)
         {
-            g_meanDelay1.addSample(dot1b - dot1a);
+            g_dotDelay1.addSample(dot1b - dot1a);
             g_delayDot1Stats.addSample(dot1b - dot1a);
+
+            g_perpDelay1.addSample(perp1a);
+            g_delayPerp1Stats.addSample(perp1a);
         }
         else
         {
-            g_meanDelay1.addSample(0.0);
+            g_dotDelay1.addSample(0.0);
             g_delayDot1Stats.addSample(0.0);
         }
 
@@ -214,12 +232,12 @@ void processSample(byteVec3 sample)
         float dot2b = dotNorm(currentSample, g_sampleDelay.getDelayedSample(2 * dotWavelength2), minLenThresh);
         if (true) // (dot2a < 0 && dot2b > 0)
         {
-            g_meanDelay2.addSample(dot2b - dot2a);
+            g_dotDelay2.addSample(dot2b - dot2a);
             g_delayDot2Stats.addSample(dot2b - dot2a);
         }
         else
         {
-            g_meanDelay2.addSample(0.0);
+            g_dotDelay2.addSample(0.0);
             g_delayDot2Stats.addSample(0.0);
         }
 
@@ -227,12 +245,12 @@ void processSample(byteVec3 sample)
         float dot3b = dotNorm(currentSample, g_sampleDelay.getDelayedSample(2 * dotWavelength3), minLenThresh);
         if (true) // (dot3a < 0 && dot3b > 0)
         {
-            g_meanDelay3.addSample(dot3b - dot3a);
+            g_dotDelay3.addSample(dot3b - dot3a);
             g_delayDot3Stats.addSample(dot3b - dot3a);
         }
         else
         {
-            g_meanDelay3.addSample(0.0);
+            g_dotDelay3.addSample(0.0);
             g_delayDot3Stats.addSample(0.0);
         }
 
@@ -240,12 +258,12 @@ void processSample(byteVec3 sample)
         float dot4b = dotNorm(currentSample, g_sampleDelay.getDelayedSample(2 * dotWavelength4), minLenThresh);
         if (true) // (dot4a < 0 && dot4b > 0)
         {
-            g_meanDelay3.addSample(dot4b - dot4a);
+            g_dotDelay3.addSample(dot4b - dot4a);
             g_delayDot3Stats.addSample(dot4b - dot4a);
         }
         else
         {
-            g_meanDelay4.addSample(0.0);
+            g_dotDelay4.addSample(0.0);
             g_delayDot4Stats.addSample(0.0);
         }
     }
@@ -254,7 +272,7 @@ void processSample(byteVec3 sample)
     {
         serialPrintLn(systemTime(), " : ", currentSample, " :: ", g_delayDot1Stats.getMean(), ", ", g_delayDot2Stats.getMean(), " :: ", 
                       getShakePrediction(), (g_shakeThreshStats.getVar() > shakeGateThreshSquared) ? " ##" : "  ");
-
+        //        serialPrintLn(systemTime(), " : ", currentSample, " :: ", g_delayDot1Stats.getMean(), " _ ", g_delayPerp1Stats.getMean(), " _ " , getTapPrediction());
     }
 }
 
