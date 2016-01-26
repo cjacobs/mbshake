@@ -52,13 +52,13 @@ inline float fast_inv_sqrt(float val)
 }
 
 template <typename T, int Mbits>
-class fixed_pt
+class fixedPt
 {
 public:
-    fixed_pt() : value_(0) {}
-    fixed_pt(int val) : value_(val << Mbits) {}
-    fixed_pt(float val) : value_(T(val * (1 << Mbits))) {}
-    fixed_pt(const fixed_pt<T, Mbits>& x) : value_(x.value_) {}
+    fixedPt() : value_(0) {}
+    fixedPt(int val) : value_(val << Mbits) {}
+    fixedPt(float val) : value_(T(val * (1 << Mbits))) {}
+    fixedPt(const fixedPt<T, Mbits>& x) : value_(x.value_) {}
     
     operator int()
     {
@@ -71,45 +71,45 @@ public:
     }
 
     // TODO: arithmetic ops: +, -, *, / (?)
-    void operator+=(const fixed_pt& x)
+    void operator+=(const fixedPt& x)
     {
         value_ += x.value_;
     }
     
-    void operator-=(const fixed_pt& x)
+    void operator-=(const fixedPt& x)
     {
         value_ -= x.value_;
     }
     
-    void operator*=(const fixed_pt& x)
+    void operator*=(const fixedPt& x)
     {
         value_ = (value_*x.value_) >> Mbits;
     }
     
-    fixed_pt<T, Mbits> operator +(const fixed_pt<T, Mbits>& b)
+    fixedPt<T, Mbits> operator +(const fixedPt<T, Mbits>& b)
     {
-        fixed_pt<T, Mbits> result(*this);
+        fixedPt<T, Mbits> result(*this);
         result += b;
         return result;
     }
 
-    fixed_pt<T, Mbits> operator -(const fixed_pt<T, Mbits>& b)
+    fixedPt<T, Mbits> operator -(const fixedPt<T, Mbits>& b)
     {
-        fixed_pt<T, Mbits> result(*this);
+        fixedPt<T, Mbits> result(*this);
         result -= b;
         return result;
     }
 
-    fixed_pt<T, Mbits> operator *(const fixed_pt<T, Mbits>& b)
+    fixedPt<T, Mbits> operator *(const fixedPt<T, Mbits>& b)
     {
-        fixed_pt<T, Mbits> result(*this);
+        fixedPt<T, Mbits> result(*this);
         result *= b;
         return result;
     }
 
 private:
-    fixed_pt(T val, bool) : value_(val) {}
+    fixedPt(T val, bool) : value_(val) {}
     T value_;
 };
 
-typedef fixed_pt<int16_t,8> fixed_16;
+typedef fixedPt<int16_t,8> fixed_16;

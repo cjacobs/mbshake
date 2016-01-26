@@ -34,7 +34,7 @@ public:
     }
 
 private:
-    ring_buffer<T, N> buffer;
+    ringBuffer<T, N> buffer;
 //    T* buffer;
 //    int bufLen;
 //    int currentPos;

@@ -78,7 +78,7 @@ private:
 
 // convenience function to make a runningStats with window size 1 less than the input buffer size, and of the same type
 template<int BufferSize, typename T>
-runningStats<BufferSize-1, BufferSize, T, T> make_stats(delayBuffer<T, BufferSize>& delayLine)
+runningStats<BufferSize-1, BufferSize, T, T> makeStats(delayBuffer<T, BufferSize>& delayLine)
 {
     return runningStats<BufferSize-1, BufferSize, T>(delayLine);
 }

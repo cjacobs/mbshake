@@ -52,14 +52,13 @@ const int dotWavelength4 = 4;
 // const int delayBufferSize = 2*(dotWavelength2) + shakeStatsBufferSize;
 const int delayBufferSize = 33; // TODO: eventually find correct minimum size here
 
-
 // Globals
 floatVec3 g_gravity = {0, 0, 0};
 
 // filters
-// TODO: make simple_iir_filter for single-pole filter
-iir_filter<floatVec3, 1, 1> lowpassFilter({ 1.0f-lowpassFilterCoeff }, { -lowpassFilterCoeff });
-iir_filter<floatVec3, 1, 1> gravityFilter({ 1.0f-gravityFilterCoeff }, { -gravityFilterCoeff });
+// TODO: make simple_iirFilter for single-pole filter
+iirFilter<floatVec3, 1, 1> lowpassFilter({ 1.0f-lowpassFilterCoeff }, { -lowpassFilterCoeff });
+iirFilter<floatVec3, 1, 1> gravityFilter({ 1.0f-gravityFilterCoeff }, { -gravityFilterCoeff });
 
 // Global delay buffer for filtered, gravity-subtracted accel input
 delayBuffer<byteVec3, delayBufferSize> g_sampleDelay;
@@ -79,21 +78,21 @@ runningStats<shakeStatsBufferSize, delayBufferSize, float, byteVec3, GetMagSq<in
 
 // TODO: quantize these to shorts or something
 delayBuffer<float, dotWavelength1 + 1> g_dotDelay1;
-auto g_delayDot1Stats = make_stats(g_dotDelay1);
+auto g_delayDot1Stats = makeStats(g_dotDelay1);
 
 delayBuffer<float, dotWavelength2 + 1> g_dotDelay2;
-auto g_delayDot2Stats = make_stats(g_dotDelay2);
+auto g_delayDot2Stats = makeStats(g_dotDelay2);
 
 delayBuffer<float, dotWavelength3 + 1> g_dotDelay3;
-auto g_delayDot3Stats = make_stats(g_dotDelay3);
+auto g_delayDot3Stats = makeStats(g_dotDelay3);
 
 delayBuffer<float, dotWavelength4 + 1> g_dotDelay4;
-auto g_delayDot4Stats = make_stats(g_dotDelay4);
+auto g_delayDot4Stats = makeStats(g_dotDelay4);
 
 
 // perp delay
 delayBuffer<float, dotWavelength1 + 1> g_perpDelay1;
-auto g_delayPerp1Stats = make_stats(g_perpDelay1);
+auto g_delayPerp1Stats = makeStats(g_perpDelay1);
 
 
 

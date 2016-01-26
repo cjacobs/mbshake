@@ -26,10 +26,10 @@ inline void filterVec(const floatVec3& vec, floatVec3& prevVec, float alpha)
 //                  - y[t-1]*a[0] - y[t-2]*b[1] ...
 
 template <typename T, int N, int M>
-class iir_filter
+class iirFilter
 {
 public:
-    iir_filter(const std::array<float, N>& b, const std::array<float, M>& a); // pass in a[1:], assuming a[0] == 1.0
+    iirFilter(const std::array<float, N>& b, const std::array<float, M>& a); // pass in a[1:], assuming a[0] == 1.0
     T filterSample(const T& x);
 
 private:
@@ -37,13 +37,13 @@ private:
     std::array<float, (N>0?N-1:0)> b_; // feed-forward (x) coefficients
     float b0_ = 0.0f; // first b coefficient (separate just to make code nicer in filterSample)
 
-    ring_buffer<T, M> y_prev_;
-    ring_buffer<T, (N>0?N-1:0)> x_prev_;
+    ringBuffer<T, M> y_prev_;
+    ringBuffer<T, (N>0?N-1:0)> x_prev_;
 
 };
 
 template <typename T, int N, int M>
-iir_filter<T,N,M>::iir_filter(const std::array<float, N>& b, const std::array<float, M>& a)
+iirFilter<T,N,M>::iirFilter(const std::array<float, N>& b, const std::array<float, M>& a)
 {
     a_ = a;
     if(N > 0)
@@ -58,7 +58,7 @@ iir_filter<T,N,M>::iir_filter(const std::array<float, N>& b, const std::array<fl
 }
 
 template <typename T, int N, int M>
-T iir_filter<T,N,M>::filterSample(const T& x)
+T iirFilter<T,N,M>::filterSample(const T& x)
 {
     T y = b0_*x;
     for(int index = 0; index < (int)b_.size(); index++)
