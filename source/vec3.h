@@ -34,6 +34,20 @@ struct vec3
         z += v.z;
     }
 
+    void operator*=(float s)
+    {
+        x *= s;
+        y *= s;
+        z *= s;
+    }
+
+    void operator/=(float d)
+    {
+        x /= d;
+        y /= d;
+        z /= d;
+    }
+
     void operator-=(const vec3<T>& v)
     {
         x -= v.x;
