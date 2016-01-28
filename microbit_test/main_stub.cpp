@@ -3,6 +3,12 @@
 
 // define stubs for functions in microbit main.cpp file
 
+unsigned long systemTime()
+{
+    static unsigned long currentTime = 0;
+    return currentTime += 18;
+}
+
 void updateAccelerometer() {}
 byteVec3 getAccelData()
 {
@@ -21,10 +27,7 @@ bool buttonB()
 
 void serialPrint(const char* str) {}
 void serialPrint(int val) {}
+void serialPrint(unsigned long val) {}
 void serialPrint(float val) {}
 void serialPrint(const byteVec3& v) {}
-void serialPrint(const char* label, int val) {}
-void serialPrint(const char* label, float val) {}
-void serialPrint(const char* label, const byteVec3& v) {}
-
-
+void serialPrint(const floatVec3& v) {}

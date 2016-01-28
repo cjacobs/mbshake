@@ -23,6 +23,12 @@ endif()
 
 set (SRC ../source/classifiers.cpp
          main_stub.cpp
+         delayBuffer_test.cpp
+         fastmath_test.cpp
+		 iirFilter_test.cpp
+		 ringBuffer_test.cpp
+		 runningStats_test.cpp
+         vec3_test.cpp
          ${PROJ_NAME}.cpp)
 
 set (INCLUDE ../source/classifiers.h
@@ -30,6 +36,7 @@ set (INCLUDE ../source/classifiers.h
              ../source/eventThresholdFilter.h
              ../source/fastmath.h
              ../source/iirFilter.h
+			 ../source/main.h
              ../source/ringBuffer.h
              ../source/runningStats.h
              ../source/vec3.h
