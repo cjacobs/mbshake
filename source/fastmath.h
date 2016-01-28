@@ -5,7 +5,7 @@
 template <typename T>
 int8_t clampByte(const T& inVal)
 {
-    return inVal < -127 ? -127 : (int8_t)inVal > 128 ? 128 : (int8_t)inVal;
+    return inVal < -128 ? -128 : inVal > 127 ? 127 : (int8_t)inVal;
 }
 
 // from http://stackoverflow.com/a/19807644

@@ -19,15 +19,17 @@ using std::max;
 // * Maybe use max over some window instead of mean for shake pred value? (though this
 //     risks making transitory spikes last longer and be harder to filter out
 
-// TODO: half-phase delayed versions?
+// TODO: add hysteresis to make shake detector continue to fire if there are 1 or 2 spurious low values
 
 // Constants
-const float lowpassFilterCoeff = 0.9f;
-const float gravityFilterCoeff = 0.05f; // problem: gravity converges too slowly (?)
-const int minLenThresh = 25; //150*150;
+const float lowpassFilterCoeff = 1.0f;
+const float gravityFilterCoeff = 0.005f; // problem: gravity converges too slowly (?)
+const float gravityFilterThresh = 126;
 
-const float shakeGestureThreshold = 0.65f;
-const int shakeEventCountThreshold = 5;
+const int minLenThresh = 5; //150*150;
+
+const float shakeGestureThreshold = 0.2f;
+const int shakeEventCountThreshold = 8;
 const float shakeGateThreshSquared = 4000000.0f;
 eventThresholdFilter<float> shakeEventFilter(shakeGestureThreshold, shakeEventCountThreshold);
 
@@ -48,6 +50,11 @@ const int dotWavelength1 = 5;
 const int dotWavelength2 = 6;
 const int dotWavelength3 = 7;
 const int dotWavelength4 = 4;
+
+const int dotMeanWindow1 = dotWavelength1 / 2;
+const int dotMeanWindow2 = dotWavelength2 / 2;
+const int dotMeanWindow3 = dotWavelength3 / 2;
+const int dotMeanWindow4 = dotWavelength4 / 2;
 
 // const int delayBufferSize = 2*(dotWavelength2) + shakeStatsBufferSize;
 const int delayBufferSize = 33; // TODO: eventually find correct minimum size here
@@ -77,16 +84,16 @@ runningStats<shakeStatsBufferSize, delayBufferSize, float, byteVec3, GetMagSq<in
 
 
 // TODO: quantize these to shorts or something
-delayBuffer<float, dotWavelength1 + 1> g_dotDelay1;
+delayBuffer<float, dotMeanWindow1 + 1> g_dotDelay1;
 auto g_delayDot1Stats = makeStats(g_dotDelay1);
 
-delayBuffer<float, dotWavelength2 + 1> g_dotDelay2;
+delayBuffer<float, dotMeanWindow2 + 1> g_dotDelay2;
 auto g_delayDot2Stats = makeStats(g_dotDelay2);
 
-delayBuffer<float, dotWavelength3 + 1> g_dotDelay3;
+delayBuffer<float, dotMeanWindow3 + 1> g_dotDelay3;
 auto g_delayDot3Stats = makeStats(g_dotDelay3);
 
-delayBuffer<float, dotWavelength4 + 1> g_dotDelay4;
+delayBuffer<float, dotMeanWindow4 + 1> g_dotDelay4;
 auto g_delayDot4Stats = makeStats(g_dotDelay4);
 
 
@@ -149,14 +156,29 @@ T sum(const T* buf, int len)
     return result;
 }
 
+byteVec3 quantizeSample(const byteVec3& b, int factor)
+{
+    // TODO: round appropriately
+    return b / factor;
+}
 
 // For some reason, this kills the micro:bit for a while
 template<typename MeanDelayType, typename MeanStatsType>
 void processDotFeature(const byteVec3& currentSample, int dotWavelength, MeanDelayType& meanDelay, MeanStatsType& delayDotStats)
 {
-    float dot1a = dotNorm(currentSample, g_sampleDelay.getDelayedSample(dotWavelength), minLenThresh);
-    float dot1b = dotNorm(currentSample, g_sampleDelay.getDelayedSample(2 * dotWavelength), minLenThresh);
-    if (true) // (dot1a < 0 && dot1b > 0)
+    // TODO: investigate if this really help like it appears to do in the python version
+    int quantRate = 16;
+
+    // holy crap... in the python code, we were severely clipping the data
+    byteVec3 quantizedCurrentSample = quantizeSample(currentSample, 1);
+
+    //    if(buttonA())
+    //        serialPrint("q: ", quantizedCurrentSample, "  ");
+
+    float dot1a = dotNorm(quantizedCurrentSample, quantizeSample(g_sampleDelay.getDelayedSample(dotWavelength), quantRate), minLenThresh);
+    float dot1b = dotNorm(quantizedCurrentSample, quantizeSample(g_sampleDelay.getDelayedSample(2 * dotWavelength), quantRate), minLenThresh);
+
+    if (dot1a < 0 && dot1b > 0)
     {
         meanDelay.addSample(dot1b - dot1a);
         delayDotStats.addSample(dot1b - dot1a);
@@ -178,10 +200,9 @@ void processSample(byteVec3 sample)
     //*
     static floatVec3 filteredSample(sample);
     filterVec(floatVec3(sample), filteredSample, lowpassFilterCoeff);
-    filterVec(filteredSample, g_gravity, gravityFilterCoeff);
+    filterVec(filteredSample, g_gravity, gravityFilterCoeff, gravityFilterThresh);
 
-    /*/
-
+    /*
     floatVec3 filteredSample = lowpassFilter.filterSample(floatVec3(sample));
     g_gravity = gravityFilter.filterSample(filteredSample);
     // */
@@ -198,88 +219,25 @@ void processSample(byteVec3 sample)
     g_shakeThreshStats.addSample(currentSample);
     
     // now add val to mean buffer
-    if (!buttonB())
-    {
-        processDotFeature(currentSample, dotWavelength1, g_dotDelay1, g_delayDot1Stats);
-        processDotFeature(currentSample, dotWavelength2, g_dotDelay2, g_delayDot2Stats);
-        processDotFeature(currentSample, dotWavelength3, g_dotDelay3, g_delayDot3Stats);
-        processDotFeature(currentSample, dotWavelength4, g_dotDelay4, g_delayDot4Stats);
-    }
-    else
-    {
-        float dot1a = dotNorm(currentSample, g_sampleDelay.getDelayedSample(dotWavelength1), minLenThresh);
-        float dot1b = dotNorm(currentSample, g_sampleDelay.getDelayedSample(2 * dotWavelength1), minLenThresh);
-        float perp1a = perpNorm(currentSample, g_sampleDelay.getDelayedSample(dotWavelength1), minLenThresh);
-        float perp1b = perpNorm(currentSample, g_sampleDelay.getDelayedSample(2 * dotWavelength1), minLenThresh);
-
-
-        if (true) //(dot1a < 0 && dot1b > 0)
-        {
-            g_dotDelay1.addSample(dot1b - dot1a);
-            g_delayDot1Stats.addSample(dot1b - dot1a);
-
-            g_perpDelay1.addSample(perp1a);
-            g_delayPerp1Stats.addSample(perp1a);
-        }
-        else
-        {
-            g_dotDelay1.addSample(0.0);
-            g_delayDot1Stats.addSample(0.0);
-        }
-
-        float dot2a = dotNorm(currentSample, g_sampleDelay.getDelayedSample(dotWavelength2), minLenThresh);
-        float dot2b = dotNorm(currentSample, g_sampleDelay.getDelayedSample(2 * dotWavelength2), minLenThresh);
-        if (true) // (dot2a < 0 && dot2b > 0)
-        {
-            g_dotDelay2.addSample(dot2b - dot2a);
-            g_delayDot2Stats.addSample(dot2b - dot2a);
-        }
-        else
-        {
-            g_dotDelay2.addSample(0.0);
-            g_delayDot2Stats.addSample(0.0);
-        }
-
-        float dot3a = dotNorm(currentSample, g_sampleDelay.getDelayedSample(dotWavelength3), minLenThresh);
-        float dot3b = dotNorm(currentSample, g_sampleDelay.getDelayedSample(2 * dotWavelength3), minLenThresh);
-        if (true) // (dot3a < 0 && dot3b > 0)
-        {
-            g_dotDelay3.addSample(dot3b - dot3a);
-            g_delayDot3Stats.addSample(dot3b - dot3a);
-        }
-        else
-        {
-            g_dotDelay3.addSample(0.0);
-            g_delayDot3Stats.addSample(0.0);
-        }
-
-        float dot4a = dotNorm(currentSample, g_sampleDelay.getDelayedSample(dotWavelength4), minLenThresh);
-        float dot4b = dotNorm(currentSample, g_sampleDelay.getDelayedSample(2 * dotWavelength4), minLenThresh);
-        if (true) // (dot4a < 0 && dot4b > 0)
-        {
-            g_dotDelay3.addSample(dot4b - dot4a);
-            g_delayDot3Stats.addSample(dot4b - dot4a);
-        }
-        else
-        {
-            g_dotDelay4.addSample(0.0);
-            g_delayDot4Stats.addSample(0.0);
-        }
-    }
-
+    //        processDotFeature(currentSample, dotWavelength1, g_dotDelay1, g_delayDot1Stats);
+    processDotFeature(currentSample, dotWavelength2, g_dotDelay2, g_delayDot2Stats);
+    //        processDotFeature(currentSample, dotWavelength3, g_dotDelay3, g_delayDot3Stats);
+    //        processDotFeature(currentSample, dotWavelength4, g_dotDelay4, g_delayDot4Stats);
+    
     if(buttonA())
     {
-        serialPrintLn(systemTime(), " : ", currentSample, " :: ", g_delayDot1Stats.getMean(), ", ", g_delayDot2Stats.getMean(), " :: ", 
-                      getShakePrediction(), (g_shakeThreshStats.getVar() > shakeGateThreshSquared) ? " ##" : "  ");
-        //        serialPrintLn(systemTime(), " : ", currentSample, " :: ", g_delayDot1Stats.getMean(), " _ ", g_delayPerp1Stats.getMean(), " _ " , getTapPrediction());
+        //        serialPrintLn(systemTime(), " : ", g_lastRawSample, " :: ", getShakePrediction(), (g_shakeThreshStats.getVar() > shakeGateThreshSquared) ? " ##" : "  ");
+        auto shakePred = getShakePrediction();
+        serialPrintLn(systemTime(), " : ", currentSample, " :: ", shakePred, (shakePred > shakeGestureThreshold) ? " ##" : "  ");
     }
 }
 
 float getShakePrediction()
 {    
+    return g_delayDot2Stats.getMean();
     // return max(g_delayDot1Stats.getMean(), g_delayDot2Stats.getMean());
-    return max( max(g_delayDot1Stats.getMean(), g_delayDot2Stats.getMean()),
-           max(g_delayDot3Stats.getMean(), g_delayDot4Stats.getMean()));
+    //    return max( max(g_delayDot1Stats.getMean(), g_delayDot2Stats.getMean()),
+    //           max(g_delayDot3Stats.getMean(), g_delayDot4Stats.getMean()));
 }
 
 float getTapPrediction()
@@ -349,7 +307,7 @@ int detectGesture()
         bool foundShake = shakeEventFilter.filterValue(shakePredVal);
         if(foundShake)
         {
-            if(buttonA()) serialPrintLn("####");
+            //            if(buttonA()) serialPrintLn("####");
             tapEventFilter.reset();
             return MICROBIT_ACCELEROMETER_SHAKE;
         }

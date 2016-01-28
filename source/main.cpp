@@ -1,6 +1,8 @@
 #include "vec3.h"
+#include "fastmath.h"
 #include "classifiers.h"
 #include "MicroBitTouchDevelop.h" // Only 1 source file can include this header
+#include "main.h"
 
 // Constants
 const int sampleRate = 18; // in ms
@@ -18,9 +20,11 @@ void updateAccelerometer()
 
 byteVec3 getAccelData()
 {
-    return byteVec3(uBit.accelerometer.getX()>>4,
-                    uBit.accelerometer.getY()>>4,
-                    uBit.accelerometer.getZ()>>4);
+    int x = clampByte(uBit.accelerometer.getX() >> 4);
+    int y = clampByte(uBit.accelerometer.getY() >> 4);
+    int z = clampByte(uBit.accelerometer.getZ() >> 4);
+
+    return byteVec3(x, y, z); // TODO: put clamp in byteVec3 c'tor (as a specialization)
 }
 
 bool buttonA()

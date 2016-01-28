@@ -13,7 +13,19 @@ inline void filterVec(const floatVec3& vec, floatVec3& prevVec, float alpha)
     prevVec.z += alpha*(vec.z - prevVec.z);
 }
 
-
+inline void filterVec(const floatVec3& vec, floatVec3& prevVec, float alpha, float thresh)
+{
+    float maxX = abs(vec.x);
+    float maxY = abs(vec.y);
+    float maxZ = abs(vec.z);
+    float maxVal = maxX > maxY ? (maxX>maxZ?maxX:maxZ) : (maxY>maxZ?maxY:maxZ);
+    if (maxVal <= thresh)
+    {
+        prevVec.x += alpha*(vec.x - prevVec.x);
+        prevVec.y += alpha*(vec.y - prevVec.y);
+        prevVec.z += alpha*(vec.z - prevVec.z);
+    }
+}
 
 // M == len(a)
 // N == len(b)

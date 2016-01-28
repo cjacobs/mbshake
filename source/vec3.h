@@ -69,6 +69,12 @@ vec3<T> operator*(const vec3<T>& b, float a)
     return vec3<T>(a*b.x, a*b.y, a*b.z);
 }
 
+template <typename T>
+vec3<T> operator/(const vec3<T>& b, float a)
+{
+    return vec3<T>(b.x/a, b.y/a, b.z/a);
+}
+
 // doofy accesor functions
 
 template <typename T>
