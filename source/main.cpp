@@ -54,11 +54,6 @@ void serialPrint(const char* str)
     printf("%s", str);
 }
 
-void serialPrint(const char* label, int val)
-{
-    printf("%s%d", label, val);
-}
-
 void serialPrint(int val)
 {
     printf("%d", val);
@@ -69,7 +64,7 @@ void serialPrint(unsigned long val)
     printf("%lu", val);
 }
 
-void serialPrint(const char* label, float val)
+void serialPrint(float val)
 {
     char minus[3] = "\0\0";
     if(val < 0)
@@ -78,17 +73,7 @@ void serialPrint(const char* label, float val)
         val = -val;
     }
     float frac = val - int(val);
-    printf("%s%s%d.%03d", label, minus, int(val), int(1000*frac));
-}
-
-void serialPrint(float val)
-{
-    serialPrint("", val);
-}
-
-void serialPrint(const char* label, const byteVec3& v)
-{
-    printf("%s%d\t%d\t%d", label, v.x, v.y, v.z);
+    printf("%s%d.%03d", minus, int(val), int(1000*frac));
 }
 
 void serialPrint(const byteVec3& v)
@@ -103,18 +88,6 @@ void serialPrint(const floatVec3& v)
     printFloat(v.y);
     printf("\t");
     printFloat(v.z);
-    printf("");
-}
-
-void serialPrint(const char* label, const floatVec3& v)
-{
-    printf("%s", label);
-    printFloat(v.x);
-    printf("\t");
-    printFloat(v.y);
-    printf("\t");
-    printFloat(v.z);
-    printf("");
 }
 
 unsigned long systemTime()

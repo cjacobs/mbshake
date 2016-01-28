@@ -73,9 +73,6 @@ private:
     T accumSumSq_ = 0;
 };
 
-// runningStats(delayBuffer<S, BufferSize>& delayLine) : delayLine_(delayLine)
-
-
 // convenience function to make a runningStats with window size 1 less than the input buffer size, and of the same type
 template<int BufferSize, typename T>
 runningStats<BufferSize-1, BufferSize, T, T> makeStats(delayBuffer<T, BufferSize>& delayLine)

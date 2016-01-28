@@ -1,6 +1,6 @@
 #pragma once
 
-#include <cstdint>
+#include <cstdint> // for int8_t, int32_t types
 
 template <typename T>
 int8_t clampByte(const T& inVal)
@@ -18,11 +18,6 @@ struct alias_cast_t
         T data;
     };
 };
-
-// TODO: implement fixed-point square root / inv square root
-// http://stackoverflow.com/questions/6286450/inverse-sqrt-for-fixed-point
-// also: http://www.realitypixels.com/turk/computergraphics/FixedSqrt.pdf
-
 
 template<typename T, typename F>
 T alias_cast(F raw_value)
@@ -51,6 +46,11 @@ inline float fast_inv_sqrt(float val)
 	return y;
 }
 
+
+// TODO: implement fixed-point square root / inv square root
+// http://stackoverflow.com/questions/6286450/inverse-sqrt-for-fixed-point
+// also: http://www.realitypixels.com/turk/computergraphics/FixedSqrt.pdf
+
 template <typename T, int Mbits>
 class fixedPt
 {
@@ -67,10 +67,10 @@ public:
     
     operator float()
     {
-        return (float)value_ / (1 << Mbits);
+        return float(value_) / float(1 << Mbits);
     }
 
-    // TODO: arithmetic ops: +, -, *, / (?)
+    // arithmetic ops: +, -, *, / (?)
     void operator+=(const fixedPt& x)
     {
         value_ += x.value_;
