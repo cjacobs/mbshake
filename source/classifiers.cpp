@@ -26,23 +26,24 @@ const float lowpassFilterCoeff = 1.0f;
 const float gravityFilterCoeff = 0.005f; // problem: gravity converges too slowly (?)
 const float gravityFilterThresh = 126;
 
-const int minLenThresh = 5; //150*150;
+const float minLenThresh = 5; 
 
-const float shakeGestureThreshold = 0.2f;
+const float shakeGestureThreshold = 0.4f;
 const int shakeEventCountThreshold = 8;
+const int shakeEventCountLowThreshold = 2;
 const float shakeGateThreshSquared = 4000000.0f;
-eventThresholdFilter<float> shakeEventFilter(shakeGestureThreshold, shakeEventCountThreshold);
+eventThresholdFilter<float> shakeEventFilter(shakeGestureThreshold, shakeEventCountThreshold, shakeEventCountLowThreshold);
 
 // Tap stuff
-const float tapGestureThreshold = 350.0f; // TODO: this can be an int
+const float tapGestureThreshold = 200.0f; // TODO: this can be an int
 const int tapEventCountThreshold = 1;
 
-const int g_tapLargeWindowSize = 11;
+const int g_tapLargeWindowSize = 8; //11; // maybe too big?
 const int g_tapImpulseWindowSize = 2;
 const float g_tapScaleDenominator = 2.5f;
 const float tapGateThresh1 = 12.0f; // variance of preceeding windown should be less than this
 const int tapGateThresh2 = 10; // intensity of impulse should be greater than this
-const int g_tapK = 3;
+const int g_tapK = 5;
 
 const int shakeStatsBufferSize = 10;
 
@@ -77,7 +78,7 @@ runningStats<g_tapLargeWindowSize, delayBufferSize, long, byteVec3, GetZ<int8_t>
 // windowed statistics for detecting high-Z-energy area during tap
 runningStats<g_tapImpulseWindowSize, delayBufferSize, long, byteVec3, GetZ<int8_t>> g_tapImpulseWindowStats(g_sampleDelay);
 
-eventThresholdFilter<float> tapEventFilter(tapGestureThreshold, tapEventCountThreshold);
+eventThresholdFilter<float> tapEventFilter(tapGestureThreshold, tapEventCountThreshold, 0);
 
 // Shake gesture stats
 runningStats<shakeStatsBufferSize, delayBufferSize, float, byteVec3, GetMagSq<int8_t, float>> g_shakeThreshStats(g_sampleDelay);
@@ -96,15 +97,13 @@ auto g_delayDot3Stats = makeStats(g_dotDelay3);
 delayBuffer<float, dotMeanWindow4 + 1> g_dotDelay4;
 auto g_delayDot4Stats = makeStats(g_dotDelay4);
 
-
 // perp delay
 delayBuffer<float, dotWavelength1 + 1> g_perpDelay1;
 auto g_delayPerp1Stats = makeStats(g_perpDelay1);
 
-
-
 int g_tapCountdown1 = 0;
-int g_tapCountdown2 = 0;
+float g_prevQuietVar = 0;
+delayBuffer<float, g_tapK+1> g_quietVarDelay;
 
 // !!! Can we subsample a sequence at compile time using template metaprogramming?
 
@@ -159,7 +158,7 @@ T sum(const T* buf, int len)
 byteVec3 quantizeSample(const byteVec3& b, int factor)
 {
     // TODO: round appropriately
-    return b / factor;
+    return b / float(factor);
 }
 
 // For some reason, this kills the micro:bit for a while
@@ -221,28 +220,35 @@ void processSample(byteVec3 sample)
     // now add val to mean buffer
     //        processDotFeature(currentSample, dotWavelength1, g_dotDelay1, g_delayDot1Stats);
     processDotFeature(currentSample, dotWavelength2, g_dotDelay2, g_delayDot2Stats);
-    //        processDotFeature(currentSample, dotWavelength3, g_dotDelay3, g_delayDot3Stats);
+    processDotFeature(currentSample, dotWavelength3, g_dotDelay3, g_delayDot3Stats);
     //        processDotFeature(currentSample, dotWavelength4, g_dotDelay4, g_delayDot4Stats);
     
     if(buttonA())
     {
         //        serialPrintLn(systemTime(), " : ", g_lastRawSample, " :: ", getShakePrediction(), (g_shakeThreshStats.getVar() > shakeGateThreshSquared) ? " ##" : "  ");
         auto shakePred = getShakePrediction();
-        serialPrintLn(systemTime(), " : ", currentSample, " :: ", shakePred, (shakePred > shakeGestureThreshold) ? " ##" : "  ");
+        //        serialPrintLn(systemTime(), " : ", currentSample, " :: ", shakePred, (shakePred > shakeGestureThreshold) ? " ##" : "  ");
+
+        auto tapPred = getTapPrediction();
+        auto quietStuff = g_tapLargeWindowStats.getVar();
+        serialPrintLn(systemTime(), " : ", currentSample, " :: ", tapPred, "\t", quietStuff, (tapPred > tapGestureThreshold) ? " ## " : "  ", g_tapCountdown1);
     }
 }
 
 float getShakePrediction()
 {    
     return g_delayDot2Stats.getMean();
-    // return max(g_delayDot1Stats.getMean(), g_delayDot2Stats.getMean());
-    //    return max( max(g_delayDot1Stats.getMean(), g_delayDot2Stats.getMean()),
-    //           max(g_delayDot3Stats.getMean(), g_delayDot4Stats.getMean()));
+    // return max(g_delayDot2Stats.getMean(), g_delayDot3Stats.getMean());
 }
 
 float getTapPrediction()
 {
-    return g_tapImpulseWindowStats.getVar();
+    // If previous quiet window was very very quiet (e.g., 0), then
+    // increase output (when micro:bit is sitting on table, tap
+    // amplitude is diminished)
+
+    float scale = fast_inv_sqrt(1.0 + g_quietVarDelay.getDelayedSample(g_tapK));
+    return g_tapImpulseWindowStats.getVar() * scale;
 }
 
 
@@ -258,33 +264,24 @@ int detectGesture()
     updateAccelerometer();
     byteVec3 sample = getAccelData();
 
-    bool shouldCheckTap = g_tapCountdown1 > 0 && g_tapCountdown2 > 0;
+    bool shouldCheckTap = g_tapCountdown1 > 0;
     bool shouldCheckShake = g_shakeThreshStats.getVar() > shakeGateThreshSquared;
 
-    // criterion 1: look for 5 samples worth of quiet
-    float tapVar = g_tapLargeWindowStats.getVar();
+    // criterion 1: look for N samples worth of quiet
+    float quietVariance = g_tapLargeWindowStats.getVar();
+    g_quietVarDelay.addSample(quietVariance);
 
-    if (tapVar <= tapGateThresh1)
+    if (quietVariance <= tapGateThresh1)
     {
-        g_tapCountdown1 = g_tapLargeWindowSize + g_tapK;
+        g_tapCountdown1 = g_tapK;
+        g_prevQuietVar = quietVariance;
     }
     else if(g_tapCountdown1 > 0)
     {
         g_tapCountdown1 -= 1;
     }
 
-    int zDiff = abs(sample.z - g_sampleDelay.getDelayedSample(2).z);
-    if (zDiff >= tapGateThresh2)
-    {
-        g_tapCountdown2 = (g_tapLargeWindowSize/2) + g_tapK;
-    }
-    else if(g_tapCountdown2 > 0)
-    {
-        g_tapCountdown2 -= 1;
-    }
-
     processSample(sample);
-
 
     if(shouldCheckTap)
     {
@@ -292,6 +289,7 @@ int detectGesture()
         bool foundTap = tapEventFilter.filterValue(tapPredVal);
         if(foundTap)
         {
+            serialPrintLn("####");
             shakeEventFilter.reset();
             return MICROBIT_ACCELEROMETER_TAP;
         }
