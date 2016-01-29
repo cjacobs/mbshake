@@ -19,7 +19,9 @@ using std::max;
 // * Maybe use max over some window instead of mean for shake pred value? (though this
 //     risks making transitory spikes last longer and be harder to filter out
 
-// TODO: add hysteresis to make shake detector continue to fire if there are 1 or 2 spurious low values
+// TODO: still don't detect taps if device is anchored to table. Then, the var over the big window is [0,0,0,0,0... ~12, ...]
+// Maybe check if var over an even bigger window is exactly(ish) 0, and lower the threshold even more if so?
+
 
 // Constants
 const float lowpassFilterCoeff = 1.0f;
@@ -41,9 +43,8 @@ const int tapEventCountThreshold = 1;
 const int g_tapLargeWindowSize = 8; //11; // maybe too big?
 const int g_tapImpulseWindowSize = 2;
 const float g_tapScaleDenominator = 2.5f;
-const float tapGateThresh1 = 12.0f; // variance of preceeding windown should be less than this
-const int tapGateThresh2 = 10; // intensity of impulse should be greater than this
-const int g_tapK = 5;
+const float tapGateThresh1 = 25.0f; // variance of preceeding windown should be less than this
+const int g_tapK = 2;
 
 const int shakeStatsBufferSize = 10;
 
@@ -127,7 +128,6 @@ const byteVec3 shakeTemplate1[] = {{ -10,    7,  -91},
 
 // need a templateDist function that takes a template, delay line, and resample rate, and returns the distance between the template and signal represented by the delay line, subsampled by the resample rate
 
-
 // Note: tmpl should be time-reversed
 template <int N, int ResampleRate, typename T, typename U>
 float templateDistSq(T* tmpl, delayBuffer<U, N>& signal)
@@ -143,17 +143,66 @@ float templateDistSq(T* tmpl, delayBuffer<U, N>& signal)
     return result;
 }
 
-template <typename T>
-T sum(const T* buf, int len)
+template <typename Fn>
+class Debouncer
 {
-    const T* end = buf+len;
-    T result = 0;
-    while(buf != end)
+public:
+    Debouncer(Fn buttonFn) : _counter(0), _didPush(false), _buttonFn(buttonFn)
     {
-        result += *buf++;
+        _counter = 0;
+        _didPush = false;
     }
-    return result;
+
+    bool operator()()
+    {
+        if(_buttonFn())
+        {
+            ++_counter;
+            if(_counter >= upThresh)
+            {
+                _didPush = true;
+                _counter = upThresh;
+            }
+        }
+        else
+        {
+            if(_counter > 0)
+            {
+                _counter--;
+                if(_counter <= downThresh)
+                {
+                    if(_didPush)
+                    {
+                        _didPush = false;
+                        _counter = 0;
+                        return true;
+                    }
+                }
+            }
+        }
+        
+        return false;
+    }
+    
+private:
+    int _counter = 0;
+    bool _didPush = false;
+    const int upThresh = 4;
+    const int downThresh = 2;
+    Fn _buttonFn;
+};
+
+template <typename Fn>
+auto makeDebouncer(Fn fn) -> Debouncer<Fn>
+{
+    return Debouncer<Fn>(fn);
 }
+
+auto buttonAUp = makeDebouncer(buttonA);
+auto buttonBUp = makeDebouncer(buttonB);
+
+bool isPrinting = false;
+bool printShake = true;
 
 byteVec3 quantizeSample(const byteVec3& b, int factor)
 {
@@ -223,15 +272,20 @@ void processSample(byteVec3 sample)
     processDotFeature(currentSample, dotWavelength3, g_dotDelay3, g_delayDot3Stats);
     //        processDotFeature(currentSample, dotWavelength4, g_dotDelay4, g_delayDot4Stats);
     
-    if(buttonA())
+    if(isPrinting)
     {
+        if(printShake)
+        {
         //        serialPrintLn(systemTime(), " : ", g_lastRawSample, " :: ", getShakePrediction(), (g_shakeThreshStats.getVar() > shakeGateThreshSquared) ? " ##" : "  ");
-        auto shakePred = getShakePrediction();
-        //        serialPrintLn(systemTime(), " : ", currentSample, " :: ", shakePred, (shakePred > shakeGestureThreshold) ? " ##" : "  ");
-
-        auto tapPred = getTapPrediction();
-        auto quietStuff = g_tapLargeWindowStats.getVar();
-        serialPrintLn(systemTime(), " : ", currentSample, " :: ", tapPred, "\t", quietStuff, (tapPred > tapGestureThreshold) ? " ## " : "  ", g_tapCountdown1);
+            auto shakePred = getShakePrediction();
+            serialPrintLn(systemTime(), " : ", currentSample, " :: ", shakePred, (shakePred > shakeGestureThreshold) ? " ##" : "  ");
+        }
+        else
+        {
+            auto tapPred = getTapPrediction();
+            auto quietStuff = g_tapLargeWindowStats.getVar();
+            serialPrintLn(systemTime(), " : ", currentSample, " :: ", tapPred, "\t", quietStuff, (tapPred > tapGestureThreshold) ? " ## " : "  ", g_tapCountdown1);
+        }
     }
 }
 
@@ -261,6 +315,16 @@ void initClassifiers()
 
 int detectGesture()
 {
+    if(buttonAUp())
+    {
+        isPrinting = !isPrinting;
+    }
+
+    if(buttonBUp())
+    {
+        printShake = !printShake;
+    }
+
     updateAccelerometer();
     byteVec3 sample = getAccelData();
 
