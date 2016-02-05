@@ -274,9 +274,10 @@ void processSample(byteVec3 sample)
     
     if(isPrinting)
     {
+        /*
         if(printShake)
         {
-        //        serialPrintLn(systemTime(), " : ", g_lastRawSample, " :: ", getShakePrediction(), (g_shakeThreshStats.getVar() > shakeGateThreshSquared) ? " ##" : "  ");
+            // serialPrintLn(systemTime(), " : ", g_lastRawSample, " :: ", getShakePrediction(), (g_shakeThreshStats.getVar() > shakeGateThreshSquared) ? " ##" : "  ");
             auto shakePred = getShakePrediction();
             serialPrintLn(systemTime(), " : ", currentSample, " :: ", shakePred, (shakePred > shakeGestureThreshold) ? " ##" : "  ");
         }
@@ -286,6 +287,7 @@ void processSample(byteVec3 sample)
             auto quietStuff = g_tapLargeWindowStats.getVar();
             serialPrintLn(systemTime(), " : ", currentSample, " :: ", tapPred, "\t", quietStuff, (tapPred > tapGestureThreshold) ? " ## " : "  ", g_tapCountdown1);
         }
+        */
     }
 }
 
@@ -317,12 +319,12 @@ int detectGesture()
 {
     if(buttonAUp())
     {
-        isPrinting = !isPrinting;
+        printShake = !printShake;
     }
 
     if(buttonBUp())
     {
-        printShake = !printShake;
+        isPrinting = !isPrinting;
     }
 
     updateAccelerometer();
@@ -353,8 +355,11 @@ int detectGesture()
         bool foundTap = tapEventFilter.filterValue(tapPredVal);
         if(foundTap)
         {
-            serialPrintLn("####");
             shakeEventFilter.reset();
+            if(isPrinting)
+            {
+                serialPrintLn("Tap\t", systemTime(), "\t", buttonA(), "\t", buttonB(), "\t", g_lastRawSample);
+            }
             return MICROBIT_ACCELEROMETER_TAP;
         }
     }
@@ -369,14 +374,22 @@ int detectGesture()
         bool foundShake = shakeEventFilter.filterValue(shakePredVal);
         if(foundShake)
         {
-            //            if(buttonA()) serialPrintLn("####");
             tapEventFilter.reset();
+            if(isPrinting)
+            {
+                serialPrintLn("Shake\t", systemTime(), "\t", buttonA(), "\t", buttonB(), "\t", g_lastRawSample);
+            }
             return MICROBIT_ACCELEROMETER_SHAKE;
         }
     }
     else
     {
         shakeEventFilter.reset();
+    }
+
+    if(isPrinting)
+    {
+        serialPrintLn("\t", systemTime(), "\t", buttonA(), "\t", buttonB(), "\t", g_lastRawSample);
     }
     return 0;
 }
