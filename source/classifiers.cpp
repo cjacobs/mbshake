@@ -31,9 +31,9 @@ const float gravityFilterThresh = 126;
 const float minLenThresh = 5; 
 
 const float shakeGestureThreshold = 0.4f;
-const int shakeEventCountThreshold = 8;
+const int shakeEventCountThreshold = 5;
 const int shakeEventCountLowThreshold = 2;
-const float shakeGateThreshSquared = 4000000.0f;
+const float shakeGateThreshSquared = 4; //000000.0f;
 eventThresholdFilter<float> shakeEventFilter(shakeGestureThreshold, shakeEventCountThreshold, shakeEventCountLowThreshold);
 
 // Tap stuff
