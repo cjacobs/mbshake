@@ -167,7 +167,7 @@ float dotNorm(const vec3<T>& a, const vec3<T>& b, float minLenThresh)
     }
 
     float bdota = dot(a,b);
-    return bdota * fast_inv_sqrt(aLenSq) * fast_inv_sqrt(bLenSq);
+    return bdota * fast_inv_sqrt(aLenSq*bLenSq);
 }
 
 template <typename T>

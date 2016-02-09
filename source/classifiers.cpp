@@ -19,7 +19,7 @@ using std::max;
 // * Maybe use max over some window instead of mean for shake pred value? (though this
 //     risks making transitory spikes last longer and be harder to filter out
 
-// TODO: still don't detect taps if device is anchored to table. Then, the var over the big window is [0,0,0,0,0... ~12, ...]
+// TODO: still doesn't detect taps if device is anchored to table. Then, the var over the big window is [0,0,0,0,0... ~12, ...]
 // Maybe check if var over an even bigger window is exactly(ish) 0, and lower the threshold even more if so?
 
 
@@ -207,7 +207,7 @@ bool printShake = true;
 byteVec3 quantizeSample(const byteVec3& b, int factor)
 {
     // TODO: round appropriately
-    return b / float(factor);
+    return b / float(factor); // TODO: shouldn't we scale back up?
 }
 
 // For some reason, this kills the micro:bit for a while
@@ -358,7 +358,7 @@ int detectGesture()
             shakeEventFilter.reset();
             if(isPrinting)
             {
-                serialPrintLn("Tap\t", systemTime(), "\t", buttonA(), "\t", buttonB(), "\t", g_lastRawSample);
+                serialPrintLn("Tap\t", systemTime(), "\t", buttonA(), "\t", buttonB(), "\t", g_lastRawSample, "\t", getShakePrediction());
             }
             return MICROBIT_ACCELEROMETER_TAP;
         }
@@ -377,7 +377,7 @@ int detectGesture()
             tapEventFilter.reset();
             if(isPrinting)
             {
-                serialPrintLn("Shake\t", systemTime(), "\t", buttonA(), "\t", buttonB(), "\t", g_lastRawSample);
+                serialPrintLn("Shake\t", systemTime(), "\t", buttonA(), "\t", buttonB(), "\t", g_lastRawSample, "\t", getShakePrediction());
             }
             return MICROBIT_ACCELEROMETER_SHAKE;
         }
@@ -389,7 +389,7 @@ int detectGesture()
 
     if(isPrinting)
     {
-        serialPrintLn("\t", systemTime(), "\t", buttonA(), "\t", buttonB(), "\t", g_lastRawSample);
+        serialPrintLn("\t", systemTime(), "\t", buttonA(), "\t", buttonB(), "\t", g_lastRawSample, "\t", getShakePrediction());
     }
     return 0;
 }
