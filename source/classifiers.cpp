@@ -206,8 +206,8 @@ bool printShake = true;
 
 byteVec3 quantizeSample(const byteVec3& b, int factor)
 {
-    // TODO: round appropriately
-    return b / float(factor); // TODO: shouldn't we scale back up?
+    // TODO: round appropriately, be more efficient
+    return byteVec3(b / float(factor))*factor;
 }
 
 // For some reason, this kills the micro:bit for a while
@@ -218,7 +218,7 @@ void processDotFeature(const byteVec3& currentSample, int dotWavelength, MeanDel
     int quantRate = 16;
 
     // holy crap... in the python code, we were severely clipping the data
-    byteVec3 quantizedCurrentSample = quantizeSample(currentSample, 1);
+    byteVec3 quantizedCurrentSample = quantizeSample(currentSample, quantRate);
 
     //    if(buttonA())
     //        serialPrint("q: ", quantizedCurrentSample, "  ");
