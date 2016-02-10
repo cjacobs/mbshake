@@ -3,7 +3,11 @@
 #include "catch.hpp"
 
 #include <vector>
+#include <iostream>
+
 using std::vector;
+using std::cout;
+using std::endl;
 
 // See catch tutorial: https://github.com/philsquared/Catch/blob/master/docs/tutorial.md
 
@@ -39,6 +43,15 @@ TEST_CASE("fast_inv_sqrt test")
     }
 }
 
+TEST_CASE("fast_sqrt test")
+{
+    vector<float> vals{ 1.1f, 2.2f, 100.1f, 500.5f, 1234.56f, 3456789.0f };
+    for (auto v : vals)
+    {
+        REQUIRE(fast_sqrt(v) == Approx(sqrtf(v)).epsilon(0.03*sqrtf(v)));
+    }
+}
+
 TEST_CASE("fixed_pt test")
 {
     fixedPt<int16_t, 8> x = 3;
@@ -50,4 +63,16 @@ TEST_CASE("fixed_pt test")
     
     REQUIRE(float(x+y) == 3.5);
     REQUIRE(float(x*y) == 1.5);
+
+
+    for (auto x : { 0.125f, 0.25f, 0.5f, 1.0f, 2.0f, 3.0f, 4.0f, 5.0f, 6.0f, 7.0f, 8.0f, 16.0f, 32.0f, 64.0f, 15.0f })
+    {
+        fixed_16 y = x;
+        cout << "y: " << float(y) << ", sqrt: " << sqrtf(x) << ", approx: " << float(y.sqrt()) << endl;
+    }
+}
+
+TEST_CASE("timing tests")
+{
+
 }
