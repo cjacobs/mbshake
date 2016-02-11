@@ -9,6 +9,8 @@ bool buttonA();
 bool buttonB();
 unsigned long systemTime();
 
+void showChar(char ch, unsigned long dur);
+
 void serialPrint(const char* str);
 void serialPrint(int val);
 void serialPrint(unsigned long val);

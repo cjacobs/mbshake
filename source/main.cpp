@@ -37,6 +37,14 @@ bool buttonB()
     return uBit.buttonB.isPressed();
 }
 
+void showChar(char ch, unsigned long dur)
+{
+    unsigned long time = uBit.systemTime();
+    uBit.display.print(ch);
+
+    g_turnOffDisplayTime = time + dur;
+}
+
 void printFloat(float val)
 {
     char minus[3] = "\0\0";

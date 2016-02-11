@@ -32,3 +32,25 @@ TEST_CASE("iirFilter")
     x = filt2.filterSample(0.0);
     REQUIRE(x == 0.25);
 }
+
+TEST_CASE("simpleIIRFilter")
+{
+    float x = 0.0f;
+
+    simpleIIRFilter<float> filt(0.5);
+    vector<float> vals {10, 11, 12, 13, 14, 15, 16, 17, 18, 1, 2, 3, 4, 5};
+    x = filt.filterSample(1.0);
+    x = filt.filterSample(1.0);
+    x = filt.filterSample(1.0);
+    x = filt.filterSample(1.0);
+    x = filt.filterSample(1.0);
+    REQUIRE(x == Approx(1.0));
+
+    iirFilter<float, 1, 1> filt2({1.0}, {-0.5});
+    x = filt2.filterSample(1.0);
+    REQUIRE(x == 1.0);
+    x = filt2.filterSample(0.0);
+    REQUIRE(x == 0.5);
+    x = filt2.filterSample(0.0);
+    REQUIRE(x == 0.25);
+}

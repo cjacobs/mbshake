@@ -24,15 +24,15 @@ using std::max;
 
 
 // Constants
-const float lowpassFilterCoeff = 1.0f;
+const float lowpassFilterCoeff = 0.8f;
 const float gravityFilterCoeff = 0.005f; // problem: gravity converges too slowly (?)
 const float gravityFilterThresh = 126;
 
-const float minLenThresh = 5; 
+const float minLenThresh = 1; 
 
 const float shakeGestureThreshold = 0.4f;
-const int shakeEventCountThreshold = 5;
-const int shakeEventCountLowThreshold = 2;
+const int shakeEventCountThreshold = 6;
+const int shakeEventCountLowThreshold = 3;
 const float shakeGateThreshSquared = 4; //000000.0f;
 eventThresholdFilter<float> shakeEventFilter(shakeGestureThreshold, shakeEventCountThreshold, shakeEventCountLowThreshold);
 
@@ -48,15 +48,15 @@ const int g_tapK = 2;
 
 const int shakeStatsBufferSize = 10;
 
-const int dotWavelength1 = 5;
-const int dotWavelength2 = 6;
-const int dotWavelength3 = 7;
-const int dotWavelength4 = 4;
+const int dotWavelength1 = 4;
+const int dotWavelength2 = 5;
+const int dotWavelength3 = 6;
+const int dotWavelength4 = 8;
 
-const int dotMeanWindow1 = dotWavelength1 / 2;
-const int dotMeanWindow2 = dotWavelength2 / 2;
-const int dotMeanWindow3 = dotWavelength3 / 2;
-const int dotMeanWindow4 = dotWavelength4 / 2;
+const int dotMeanWindow1 = dotWavelength1; // / 2;
+const int dotMeanWindow2 = dotWavelength2; // / 2;
+const int dotMeanWindow3 = dotWavelength3; // / 2;
+const int dotMeanWindow4 = dotWavelength4; // / 2;
 
 // const int delayBufferSize = 2*(dotWavelength2) + shakeStatsBufferSize;
 const int delayBufferSize = 33; // TODO: eventually find correct minimum size here
@@ -203,12 +203,15 @@ auto buttonBUp = makeDebouncer(buttonB);
 
 bool isPrinting = false;
 bool printShake = true;
+bool allowSlowGesture = false;
 
 byteVec3 quantizeSample(const byteVec3& b, int factor)
 {
     // TODO: round appropriately, be more efficient
     return byteVec3(b / float(factor))*factor;
 }
+
+byteVec3 lastQuantizedSample;
 
 // For some reason, this kills the micro:bit for a while
 template<typename MeanDelayType, typename MeanStatsType>
@@ -217,11 +220,9 @@ void processDotFeature(const byteVec3& currentSample, int dotWavelength, MeanDel
     // TODO: investigate if this really help like it appears to do in the python version
     int quantRate = 16;
 
-    // holy crap... in the python code, we were severely clipping the data
+    // omigosh... in the python code, we were severely clipping the data
     byteVec3 quantizedCurrentSample = quantizeSample(currentSample, quantRate);
-
-    //    if(buttonA())
-    //        serialPrint("q: ", quantizedCurrentSample, "  ");
+    lastQuantizedSample = quantizedCurrentSample;
 
     float dot1a = dotNorm(quantizedCurrentSample, quantizeSample(g_sampleDelay.getDelayedSample(dotWavelength), quantRate), minLenThresh);
     float dot1b = dotNorm(quantizedCurrentSample, quantizeSample(g_sampleDelay.getDelayedSample(2 * dotWavelength), quantRate), minLenThresh);
@@ -241,7 +242,10 @@ void processDotFeature(const byteVec3& currentSample, int dotWavelength, MeanDel
 float getShakePrediction();
 float getTapPrediction();
 
+// diagnostic stuff
 byteVec3 g_lastRawSample;
+byteVec3 g_lastFilteredSample;
+
 void processSample(byteVec3 sample)
 {
     g_lastRawSample = sample;
@@ -259,6 +263,7 @@ void processSample(byteVec3 sample)
                                         clampByte(sample.y-g_gravity.y),
                                         clampByte(sample.z-g_gravity.z) };
     
+    g_lastFilteredSample = currentSample;
     // TODO: maybe we should somehow associate the stats objects with the delay lines
     //       then we won't have to remember to add the stats.addSample() lines
     g_sampleDelay.addSample(currentSample); 
@@ -269,32 +274,23 @@ void processSample(byteVec3 sample)
     // now add val to mean buffer
     //        processDotFeature(currentSample, dotWavelength1, g_dotDelay1, g_delayDot1Stats);
     processDotFeature(currentSample, dotWavelength2, g_dotDelay2, g_delayDot2Stats);
-    processDotFeature(currentSample, dotWavelength3, g_dotDelay3, g_delayDot3Stats);
-    //        processDotFeature(currentSample, dotWavelength4, g_dotDelay4, g_delayDot4Stats);
-    
-    if(isPrinting)
+    //    processDotFeature(currentSample, dotWavelength3, g_dotDelay3, g_delayDot3Stats);
+    if(allowSlowGesture)
     {
-        /*
-        if(printShake)
-        {
-            // serialPrintLn(systemTime(), " : ", g_lastRawSample, " :: ", getShakePrediction(), (g_shakeThreshStats.getVar() > shakeGateThreshSquared) ? " ##" : "  ");
-            auto shakePred = getShakePrediction();
-            serialPrintLn(systemTime(), " : ", currentSample, " :: ", shakePred, (shakePred > shakeGestureThreshold) ? " ##" : "  ");
-        }
-        else
-        {
-            auto tapPred = getTapPrediction();
-            auto quietStuff = g_tapLargeWindowStats.getVar();
-            serialPrintLn(systemTime(), " : ", currentSample, " :: ", tapPred, "\t", quietStuff, (tapPred > tapGestureThreshold) ? " ## " : "  ", g_tapCountdown1);
-        }
-        */
+        processDotFeature(currentSample, dotWavelength4, g_dotDelay4, g_delayDot4Stats);
     }
 }
 
 float getShakePrediction()
 {    
-    return g_delayDot2Stats.getMean();
-    // return max(g_delayDot2Stats.getMean(), g_delayDot3Stats.getMean());
+    if(allowSlowGesture)
+    {
+        return max(g_delayDot2Stats.getMean(), g_delayDot4Stats.getMean());
+    }
+    else
+    {
+        return g_delayDot2Stats.getMean();
+    }
 }
 
 float getTapPrediction()
@@ -319,7 +315,16 @@ int detectGesture()
 {
     if(buttonAUp())
     {
-        printShake = !printShake;
+        //        printShake = !printShake;
+        allowSlowGesture = !allowSlowGesture;
+        if(allowSlowGesture)
+        {
+            showChar('2', 50);
+        }
+        else
+        {
+            showChar('1', 50);
+        }
     }
 
     if(buttonBUp())
@@ -349,6 +354,9 @@ int detectGesture()
 
     processSample(sample);
 
+    float diagnosticVal;
+    if(isPrinting) diagnosticVal = getShakePrediction();
+
     if(shouldCheckTap)
     {
         float tapPredVal = getTapPrediction();
@@ -358,7 +366,7 @@ int detectGesture()
             shakeEventFilter.reset();
             if(isPrinting)
             {
-                serialPrintLn("Tap\t", systemTime(), "\t", buttonA(), "\t", buttonB(), "\t", g_lastRawSample, "\t", getShakePrediction());
+                serialPrintLn("Tap\t", systemTime(), "\t", buttonA(), "\t", buttonB(), "\t", g_lastRawSample, "\t", diagnosticVal);
             }
             return MICROBIT_ACCELEROMETER_TAP;
         }
@@ -367,17 +375,13 @@ int detectGesture()
     if(shouldCheckShake)
     {
         float shakePredVal = getShakePrediction();
-        //    float tmplDist = templateDistSq<16, 2>(shakeTemplate1, g_sampleDelay);
-        //    serialPrint("tmpl: ", tmplDist);
-        //serialPrint("accel: ", g_sampleDelay.getDelayedSample(0));
-
         bool foundShake = shakeEventFilter.filterValue(shakePredVal);
         if(foundShake)
         {
             tapEventFilter.reset();
             if(isPrinting)
             {
-                serialPrintLn("Shake\t", systemTime(), "\t", buttonA(), "\t", buttonB(), "\t", g_lastRawSample, "\t", getShakePrediction());
+                serialPrintLn("Shake\t", systemTime(), "\t", buttonA(), "\t", buttonB(), "\t", g_lastRawSample, "\t", diagnosticVal);
             }
             return MICROBIT_ACCELEROMETER_SHAKE;
         }
@@ -389,7 +393,7 @@ int detectGesture()
 
     if(isPrinting)
     {
-        serialPrintLn("\t", systemTime(), "\t", buttonA(), "\t", buttonB(), "\t", g_lastRawSample, "\t", getShakePrediction());
+        serialPrintLn("\t", systemTime(), "\t", buttonA(), "\t", buttonB(), "\t", g_lastRawSample, "\t", diagnosticVal);
     }
     return 0;
 }

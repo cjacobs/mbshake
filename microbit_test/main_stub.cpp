@@ -25,6 +25,7 @@ bool buttonB()
     return false;
 }
 
+void showChar(char ch, unsigned long dur) {}
 void serialPrint(const char* str) {}
 void serialPrint(int val) {}
 void serialPrint(unsigned long val) {}

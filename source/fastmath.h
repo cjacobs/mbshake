@@ -61,7 +61,7 @@ inline float fast_sqrt(float val)
     // TODO: figure out right eqn for newton step here
     //	y  = y * ( threehalfs - ( x2 * y * y ) ); // repeat as necessary
 
-    y = 0.5*(y + (val / y));
+    y = 0.5f*(y + (val / y));
     return y;
 }
 
@@ -85,6 +85,19 @@ public:
     fixedPt(int val) : value_(val << Mbits) {}
     fixedPt(float val) : value_(T(val * (1 << Mbits))) {}
     fixedPt(const fixedPt<T, Mbits>& x) : value_(x.value_) {}
+
+    template <int Mbits2>
+    fixedPt(const fixedPt<T, Mbits2>& x)
+    {
+        if(Mbits > Mbits2)
+        {
+            value_ = x.value_ << Mbits - Mbits2;
+        }
+        else
+        {
+            value_ = x.value_ >> Mbits2 - Mbits;
+        }
+    }
 
     operator int()
     {
@@ -180,7 +193,11 @@ public:
 
         return fixedPt<T, Mbits>(out, true);
     }
+
 private:
+    template <typename U, int Mbits2>
+    friend class fixedPt;
+
     fixedPt(T val, bool) : value_(val) {}
     T value_;
 };

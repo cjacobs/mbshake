@@ -2,6 +2,8 @@
 
 #include "ringBuffer.h"
 #include "vec3.h"
+#include "fastmath.h"
+
 #include <array>
 #include <algorithm>
 
@@ -26,6 +28,32 @@ inline void filterVec(const floatVec3& vec, floatVec3& prevVec, float alpha, flo
         prevVec.z += alpha*(vec.z - prevVec.z);
     }
 }
+
+
+template <typename Tdata, typename Talpha=Tdata>
+class simpleIIRFilter
+{
+public:
+    simpleIIRFilter(Talpha alpha) : alpha_(alpha)
+    {
+    }
+    
+    void init(const Tdata& data)
+    {
+        prevVec_ = data;
+    }
+
+    const Tdata& filterSample(const Tdata& x)
+    {
+        prevVec_ += alpha_*(x-prevVec_);
+        return prevVec_;
+    }
+
+private:
+    Talpha alpha_;
+    Tdata prevVec_;
+};
+
 
 // M == len(a)
 // N == len(b)
