@@ -49,9 +49,6 @@ inline float fast_inv_sqrt(float val)
 // adapted from http://h14s.p5r.org/2012/09/0x5f3759df.html
 inline float fast_sqrt(float val)
 {
-    const float threehalfs = 1.5f;
-
-    float x2 = val * 0.5f;
     float y = val;
 
     int32_t i = alias_cast<long>(y);
@@ -61,7 +58,7 @@ inline float fast_sqrt(float val)
     // TODO: figure out right eqn for newton step here
     //	y  = y * ( threehalfs - ( x2 * y * y ) ); // repeat as necessary
 
-    y = 0.5f*(y + (val / y));
+    y = 0.5f*(y + (val / y)); // yuck! divide
     return y;
 }
 
@@ -78,17 +75,17 @@ constexpr T sqrtVal(const int x)
 // also: http://www.realitypixels.com/turk/computergraphics/FixedSqrt.pdf
 
 template <typename T, int Mbits>
-class fixedPt
+class FixedPt
 {
 public:
-    fixedPt() : value_(0) {}
-    fixedPt(int val) : value_(val << Mbits) {}
-    fixedPt(float val) : value_(T(val * (1 << Mbits))) {}
-    fixedPt(double val) : value_(T(val * (1 << Mbits))) {}
-    fixedPt(const fixedPt<T, Mbits>& x) : value_(x.value_) {}
+    FixedPt() : value_(0) {}
+    FixedPt(int val) : value_(val << Mbits) {}
+    FixedPt(float val) : value_(T(val * (1 << Mbits))) {}
+    FixedPt(double val) : value_(T(val * (1 << Mbits))) {}
+    FixedPt(const FixedPt<T, Mbits>& x) : value_(x.value_) {}
 
     template <int Mbits2>
-    fixedPt(const fixedPt<T, Mbits2>& x)
+    FixedPt(const FixedPt<T, Mbits2>& x)
     {
         if(Mbits > Mbits2)
         {
@@ -116,43 +113,43 @@ public:
     }
 
     // arithmetic ops: +, -, *, / (?)
-    void operator+=(const fixedPt& x)
+    void operator+=(const FixedPt& x)
     {
         value_ += x.value_;
     }
 
-    void operator-=(const fixedPt& x)
+    void operator-=(const FixedPt& x)
     {
         value_ -= x.value_;
     }
 
-    void operator*=(const fixedPt& x)
+    void operator*=(const FixedPt& x)
     {
         value_ = (value_*x.value_) >> Mbits;
     }
 
-    fixedPt<T, Mbits> operator +(const fixedPt<T, Mbits>& b)
+    FixedPt<T, Mbits> operator +(const FixedPt<T, Mbits>& b)
     {
-        fixedPt<T, Mbits> result(*this);
+        FixedPt<T, Mbits> result(*this);
         result += b;
         return result;
     }
 
-    fixedPt<T, Mbits> operator -(const fixedPt<T, Mbits>& b) const
+    FixedPt<T, Mbits> operator -(const FixedPt<T, Mbits>& b) const
     {
-        fixedPt<T, Mbits> result(*this);
+        FixedPt<T, Mbits> result(*this);
         result -= b;
         return result;
     }
 
-    fixedPt<T, Mbits> operator *(const fixedPt<T, Mbits>& b)
+    FixedPt<T, Mbits> operator *(const FixedPt<T, Mbits>& b)
     {
-        fixedPt<T, Mbits> result(*this);
+        FixedPt<T, Mbits> result(*this);
         result *= b;
         return result;
     }
 
-    fixedPt<T, Mbits> sqrtx()
+    FixedPt<T, Mbits> sqrtx()
     {
         // adapted from http://www.realitypixels.com/turk/computergraphics/FixedSqrt.pdf
         unsigned long root = 0;
@@ -171,11 +168,11 @@ public:
 
         } while (count-- != 0);
         
-        return fixedPt<T, Mbits>(root, true);
+        return FixedPt<T, Mbits>(root, true);
     }
 
     // my version
-    fixedPt<T, Mbits> sqrt()
+    FixedPt<T, Mbits> sqrt()
     {
         static const T lookupTable[16] = { 0, 1 << Mbits, sqrtVal<T,Mbits>(2), sqrtVal<T,Mbits>(3), sqrtVal<T,Mbits>(4), sqrtVal<T,Mbits>(5), sqrtVal<T,Mbits>(6), sqrtVal<T,Mbits>(7),
             sqrtVal<T,Mbits>(8), sqrtVal<T,Mbits>(9), sqrtVal<T,Mbits>(10), sqrtVal<T,Mbits>(11), sqrtVal<T,Mbits>(12), sqrtVal<T,Mbits>(13), sqrtVal<T,Mbits>(14), sqrtVal<T,Mbits>(15) };
@@ -197,16 +194,16 @@ public:
             n += 2;
         }
 
-        return fixedPt<T, Mbits>(out, true);
+        return FixedPt<T, Mbits>(out, true);
     }
 
 private:
     template <typename U, int Mbits2>
-    friend class fixedPt;
+    friend class FixedPt;
 
-    fixedPt(T val, bool) : value_(val) {}
+    FixedPt(T val, bool) : value_(val) {}
     T value_;
 };
 
-typedef fixedPt<int16_t, 8> fixed_16;
+typedef FixedPt<int16_t, 8> fixed_16;
 

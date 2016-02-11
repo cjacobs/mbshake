@@ -1,10 +1,10 @@
 #pragma once
 
-#include "vec3.h"
-// Functions that reference uBit, which can only be accessed from one source file:
+#include "Vector3.h"
 
+// Various helper functions to access the micro:bit instance
 void updateAccelerometer();
-byteVec3 getAccelData();
+byteVector3 getAccelData();
 bool buttonA();
 bool buttonB();
 unsigned long systemTime();
@@ -15,8 +15,8 @@ void serialPrint(const char* str);
 void serialPrint(int val);
 void serialPrint(unsigned long val);
 void serialPrint(float val);
-void serialPrint(const byteVec3& v);
-void serialPrint(const floatVec3& v);
+void serialPrint(const byteVector3& v);
+void serialPrint(const floatVector3& v);
 
 template <typename FirstArg, typename... RestArgs>
 struct serialPrinter
@@ -44,3 +44,4 @@ void serialPrintLn(Args ...args)
     serialPrinter<Args...>::serialPrintLn(args...);
 }
 
+void panic();

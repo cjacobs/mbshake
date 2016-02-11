@@ -23,5 +23,5 @@
   },
   "targetDependencies": { },
   "bin": "./source",
-  "extraIncludes": [ "microbit-touchdevelop" ]
+  "extraIncludes": [ "microbit-touchdevelop", "inc" ]
 }

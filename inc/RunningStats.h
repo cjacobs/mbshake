@@ -1,7 +1,7 @@
 #pragma once
 
-#include "delayBuffer.h"
-#include "fastmath.h"
+#include "DelayBuffer.h"
+#include "FastMath.h"
 
 template <typename T>
 class IdentityAccessor
@@ -18,10 +18,10 @@ public:
 // An Accessor has a single static function get_val() that takes a value of type S and returns a value of type T
 //  (maybe we should call it a transformer...)
 template <int WindowSize, int BufferSize, typename T, typename S=T, typename Accessor=IdentityAccessor<S>>
-class runningStats
+class RunningStats
 {
 public:
-    runningStats(delayBuffer<S, BufferSize>& delayLine) : delayLine_(delayLine)
+    RunningStats(DelayBuffer<S, BufferSize>& delayLine) : delayLine_(delayLine)
     {
     }
 
@@ -67,15 +67,15 @@ public:
 
 private:
     const int windowSize_ = WindowSize;
-    delayBuffer<S, BufferSize>& delayLine_;
+    DelayBuffer<S, BufferSize>& delayLine_;
 
     T accumSum_ = 0;
     T accumSumSq_ = 0;
 };
 
-// convenience function to make a runningStats with window size 1 less than the input buffer size, and of the same type
+// convenience function to make a RunningStats with window size 1 less than the input buffer size, and of the same type
 template<int BufferSize, typename T>
-runningStats<BufferSize-1, BufferSize, T, T> makeStats(delayBuffer<T, BufferSize>& delayLine)
+RunningStats<BufferSize-1, BufferSize, T, T> makeStats(DelayBuffer<T, BufferSize>& delayLine)
 {
-    return runningStats<BufferSize-1, BufferSize, T>(delayLine);
+    return RunningStats<BufferSize-1, BufferSize, T>(delayLine);
 }

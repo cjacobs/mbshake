@@ -1,11 +1,11 @@
 #pragma once
-#include "fastmath.h"
-#include "ringBuffer.h"
+#include "FastMath.h"
+#include "RingBuffer.h"
 
-// TODO: use ring buffer of size N+1? With delay of N, we want to get sample delayed by any amount in [0,N]
+// TODO: use ring buffer of size N+1? With delay of N, we want to get sample delayed by any amount in [0,N] (no?)
 
 template <typename T, int N>
-class delayBuffer
+class DelayBuffer
 {
 public:
     void addSample(T val)
@@ -19,6 +19,6 @@ public:
     }
 
 private:
-    ringBuffer<T, N> buffer;
+    RingBuffer<T, N> buffer;
 };
 

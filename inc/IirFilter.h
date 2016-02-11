@@ -1,21 +1,21 @@
 #pragma once
 
-#include "ringBuffer.h"
-#include "vec3.h"
-#include "fastmath.h"
+#include "RingBuffer.h"
+#include "Vector3.h"
+#include "FastMath.h"
 
 #include <array>
 #include <algorithm>
 
 // Simple 1-tap IIR filter with a = {-alpha} and b = {1-alpha}
-inline void filterVec(const floatVec3& vec, floatVec3& prevVec, float alpha)
+inline void filterVec(const floatVector3& vec, floatVector3& prevVec, float alpha)
 {
     prevVec.x += alpha*(vec.x - prevVec.x);
     prevVec.y += alpha*(vec.y - prevVec.y);
     prevVec.z += alpha*(vec.z - prevVec.z);
 }
 
-inline void filterVec(const floatVec3& vec, floatVec3& prevVec, float alpha, float thresh)
+inline void filterVec(const floatVector3& vec, floatVector3& prevVec, float alpha, float thresh)
 {
     float maxX = abs(vec.x);
     float maxY = abs(vec.y);
@@ -31,12 +31,11 @@ inline void filterVec(const floatVec3& vec, floatVec3& prevVec, float alpha, flo
 
 
 template <typename Tdata, typename Talpha=Tdata>
-class simpleIIRFilter
+class SimpleIirFilter
 {
 public:
-    simpleIIRFilter(Talpha alpha) : alpha_(alpha), prevVal_(0)
-    {
-    }
+    SimpleIirFilter(Talpha alpha) : alpha_(alpha), prevVal_(Tdata())
+    { }
     
     void init(const Tdata& data)
     {
@@ -46,6 +45,11 @@ public:
     const Tdata& filterSample(const Tdata& x)
     {
         prevVal_ += alpha_*(x-prevVal_);
+        return prevVal_;
+    }
+
+    const Tdata& getLastSample() const
+    {
         return prevVal_;
     }
 
@@ -66,10 +70,10 @@ private:
 //                  - y[t-1]*a[0] - y[t-2]*b[1] ...
 
 template <typename T, int N, int M>
-class iirFilter
+class IirFilter
 {
 public:
-    iirFilter(const std::array<float, N>& b, const std::array<float, M>& a); // pass in a[1:], assuming a[0] == 1.0
+    IirFilter(const std::array<float, N>& b, const std::array<float, M>& a); // pass in a[1:], assuming a[0] == 1.0
     T filterSample(const T& x);
 
 private:
@@ -77,13 +81,13 @@ private:
     std::array<float, (N>0?N-1:0)> b_; // feed-forward (x) coefficients
     float b0_ = 0.0f; // first b coefficient (separate just to make code nicer in filterSample)
 
-    ringBuffer<T, M> y_prev_;
-    ringBuffer<T, (N>0?N-1:0)> x_prev_;
+    RingBuffer<T, M> y_prev_;
+    RingBuffer<T, (N>0?N-1:0)> x_prev_;
 
 };
 
 template <typename T, int N, int M>
-iirFilter<T,N,M>::iirFilter(const std::array<float, N>& b, const std::array<float, M>& a)
+IirFilter<T,N,M>::IirFilter(const std::array<float, N>& b, const std::array<float, M>& a)
 {
     a_ = a;
     if(N > 0)
@@ -98,7 +102,7 @@ iirFilter<T,N,M>::iirFilter(const std::array<float, N>& b, const std::array<floa
 }
 
 template <typename T, int N, int M>
-T iirFilter<T,N,M>::filterSample(const T& x)
+T IirFilter<T,N,M>::filterSample(const T& x)
 {
     T y = b0_*x;
     for(int index = 0; index < (int)b_.size(); index++)

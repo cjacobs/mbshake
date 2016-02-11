@@ -3,10 +3,11 @@
 // TODO: add hysteresis for turning off as well
 
 template <typename T>
-class eventThresholdFilter
+class EventThresholdFilter
 {
 public:
-    eventThresholdFilter(T gestureThreshold, int eventCountThreshold, int lowThreshold) : count_(0), gestureThreshold_(gestureThreshold), eventCountThreshold_(eventCountThreshold), lowThreshold_(lowThreshold) {};
+    EventThresholdFilter(T gestureThreshold, int eventCountThreshold, int lowThreshold) : count_(0), gestureThreshold_(gestureThreshold), eventCountThreshold_(eventCountThreshold), lowThreshold_(lowThreshold) {};
+
     bool filterValue(T value)
     {
         if(value >= gestureThreshold_)
