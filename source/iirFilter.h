@@ -34,7 +34,7 @@ template <typename Tdata, typename Talpha=Tdata>
 class simpleIIRFilter
 {
 public:
-    simpleIIRFilter(Talpha alpha) : alpha_(alpha)
+    simpleIIRFilter(Talpha alpha) : alpha_(alpha), prevVec_(0)
     {
     }
     

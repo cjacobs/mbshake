@@ -38,6 +38,7 @@ TEST_CASE("simpleIIRFilter")
     float x = 0.0f;
 
     simpleIIRFilter<float> filt(0.5);
+    filt.init(1.0);
     vector<float> vals {10, 11, 12, 13, 14, 15, 16, 17, 18, 1, 2, 3, 4, 5};
     x = filt.filterSample(1.0);
     x = filt.filterSample(1.0);
