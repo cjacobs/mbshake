@@ -20,11 +20,13 @@ void updateAccelerometer()
 
 byteVec3 getAccelData()
 {
+    // Actually, I don't think we need the clampByte here
+    // TODO: test if clamp was necessary and display something if so, just to make sure
     int x = clampByte(uBit.accelerometer.getX() >> 4);
     int y = clampByte(uBit.accelerometer.getY() >> 4);
     int z = clampByte(uBit.accelerometer.getZ() >> 4);
 
-    return byteVec3(x, y, z); // TODO: put clamp in byteVec3 c'tor (as a specialization)
+    return byteVec3(x, y, z);
 }
 
 bool buttonA()
