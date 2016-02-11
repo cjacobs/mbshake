@@ -84,6 +84,7 @@ public:
     fixedPt() : value_(0) {}
     fixedPt(int val) : value_(val << Mbits) {}
     fixedPt(float val) : value_(T(val * (1 << Mbits))) {}
+    fixedPt(double val) : value_(T(val * (1 << Mbits))) {}
     fixedPt(const fixedPt<T, Mbits>& x) : value_(x.value_) {}
 
     template <int Mbits2>
@@ -99,14 +100,19 @@ public:
         }
     }
 
-    operator int()
+    operator int() const
     {
         return value_ >> Mbits;
     }
 
-    operator float()
+    operator float() const
     {
         return float(value_) / float(1 << Mbits);
+    }
+
+    operator double() const
+    {
+        return double(value_) / double(1 << Mbits);
     }
 
     // arithmetic ops: +, -, *, / (?)
@@ -132,7 +138,7 @@ public:
         return result;
     }
 
-    fixedPt<T, Mbits> operator -(const fixedPt<T, Mbits>& b)
+    fixedPt<T, Mbits> operator -(const fixedPt<T, Mbits>& b) const
     {
         fixedPt<T, Mbits> result(*this);
         result -= b;

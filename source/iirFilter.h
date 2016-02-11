@@ -34,24 +34,24 @@ template <typename Tdata, typename Talpha=Tdata>
 class simpleIIRFilter
 {
 public:
-    simpleIIRFilter(Talpha alpha) : alpha_(alpha), prevVec_(0)
+    simpleIIRFilter(Talpha alpha) : alpha_(alpha), prevVal_(0)
     {
     }
     
     void init(const Tdata& data)
     {
-        prevVec_ = data;
+        prevVal_ = data;
     }
 
     const Tdata& filterSample(const Tdata& x)
     {
-        prevVec_ += alpha_*(x-prevVec_);
-        return prevVec_;
+        prevVal_ += alpha_*(x-prevVal_);
+        return prevVal_;
     }
 
 private:
     Talpha alpha_;
-    Tdata prevVec_;
+    Tdata prevVal_;
 };
 
 
