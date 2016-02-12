@@ -21,31 +21,31 @@ if(CMAKE_COMPILER_IS_GNUCC OR CMAKE_COMPILER_IS_GNUCXX OR CMAKE_CXX_COMPILER_ID 
   add_compile_options(-std=c++1y)
 endif()
 
-set (SRC ../source/classifiers.cpp
+set (SRC ../source/GestureDetector.cpp
          main_stub.cpp
          delayBuffer_test.cpp
          fastmath_test.cpp
 		 iirFilter_test.cpp
 		 ringBuffer_test.cpp
 		 runningStats_test.cpp
-         vec3_test.cpp
+         vector3_test.cpp
          ${PROJ_NAME}.cpp)
 
-set (INCLUDE ../source/classifiers.h
-             ../source/delayBuffer.h
-             ../source/eventThresholdFilter.h
-             ../source/fastmath.h
-             ../source/iirFilter.h
-			 ../source/main.h
-             ../source/ringBuffer.h
-             ../source/runningStats.h
-             ../source/vec3.h
+set (INCLUDE ../inc/DelayBuffer.h
+             ../inc/EventThresholdFilter.h
+             ../inc/FastMath.h
+			 ../inc/GestureDetector.h
+             ../inc/IirFilter.h
+			 ../inc/MicroBitAccess.h
+             ../inc/RingBuffer.h
+             ../inc/RunningStats.h
+             ../inc/Vector3.h
              catch.hpp)
          
 source_group("src" FILES ${SRC})
 source_group("include" FILES ${INCLUDE})
 
-include_directories(../source)
+include_directories(../inc)
 
 # create executable
 add_executable(${PROJ_NAME} ${SRC} ${INCLUDE})

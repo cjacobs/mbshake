@@ -1,5 +1,5 @@
-#include "delayBuffer.h"
-#include "runningStats.h"
+#include "DelayBuffer.h"
+#include "RunningStats.h"
 
 #include "catch.hpp"
 
@@ -15,8 +15,8 @@ using std::vector;
 TEST_CASE("runningStats test")
 {
     vector<float> vals{ 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16 };
-    delayBuffer<float, 5> delayBuf;
-    runningStats<4, 5, float> stats(delayBuf);
+    DelayBuffer<float, 5> delayBuf;
+    RunningStats<4, 5, float> stats(delayBuf);
 
     for (int index = 0; index < 4; index++)
     {

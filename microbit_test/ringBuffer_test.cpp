@@ -1,4 +1,4 @@
-#include "ringBuffer.h"
+#include "RingBuffer.h"
 
 #include "catch.hpp"
 
@@ -14,7 +14,7 @@ TEST_CASE("ringBuffer test")
 {
     vector<float> vals {10, 11, 12, 13, 14, 15, 16, 17, 18, 1, 2, 3, 4, 5};
 
-    ringBuffer<float, 5> ringBuf;
+    RingBuffer<float, 5> ringBuf;
     for (auto v: vals)
     {
         ringBuf.push_back(v);

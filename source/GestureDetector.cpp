@@ -42,45 +42,6 @@ const float tapGateThresh1 = 25.0f; // variance of preceeding windown should be 
 // TODO: still doesn't detect taps if device is anchored to table. Then, the var over the big window is [0,0,0,0,0... ~12, ...]
 // Maybe check if var over an even bigger window is exactly(ish) 0, and lower the threshold even more if so?
 
-
-// !!! Can we subsample a sequence at compile time using template metaprogramming?
-
-// templates
-const byteVector3 shakeTemplate1[] = {{ -10,    7,  -91},
-                                   {  43,    0, -102},
-                                   { 107,  -37, -101},
-                                   { 109,    5,  -75},
-                                   {  98,   56,  -66},
-                                   {   9,   97,  -36},
-                                   { -67,   78,  -65},
-                                   { -86,   40, -127},
-                                   { -87,   55, -103},
-                                   { -29,   64,  -97},
-                                   {  43,   64,  -84},
-                                   {  81,   28,  -82},
-                                   { 108,  -41,  -78},
-                                   {  76,  -13,  -69},
-                                   {  10,    3,  -46},
-                                   {  -2,   -1,  -49}};
-
-// need a templateDist function that takes a template, delay line, and resample rate, and returns the distance between the template and signal represented by the delay line, subsampled by the resample rate
-
-
-// Note: tmpl should be time-reversed
-template <int N, int ResampleRate, typename T, typename U>
-float templateDistSq(T* tmpl, DelayBuffer<U, N>& signal)
-{
-    // TODO: can probably do all the following with template metaprogramming if we really care
-    float result;
-    for(int index = 0; index < N; index++)
-    {
-        auto temp = tmpl[N-index-1] - signal.getDelayedSample(ResampleRate*index);
-        auto tempNormSq = normSq(temp);
-        result += tempNormSq;
-    }
-    return result;
-}
-
 GestureDetector::GestureDetector() : gravityFilter(gravityFilterCoeff),
                                      tapLargeWindowStats(sampleDelayBuffer),
                                      tapImpulseWindowStats(sampleDelayBuffer),

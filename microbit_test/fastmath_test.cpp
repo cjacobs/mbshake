@@ -1,4 +1,4 @@
-#include "fastmath.h"
+#include "FastMath.h"
 
 #include "catch.hpp"
 
@@ -54,8 +54,8 @@ TEST_CASE("fast_sqrt test")
 
 TEST_CASE("fixed_pt test")
 {
-    fixedPt<int16_t, 8> x = 3;
-    fixedPt<int16_t, 8> y = 0.5f;
+    FixedPt<int16_t, 8> x = 3;
+    FixedPt<int16_t, 8> y = 0.5f;
 
     REQUIRE(int(x) == 3);
     REQUIRE(float(x) == 3.0f);
@@ -65,13 +65,13 @@ TEST_CASE("fixed_pt test")
     REQUIRE(float(x*y) == 1.5);
 
     // casting between widths
-    fixedPt<int16_t, 4> x_4 = x;
-    fixedPt<int16_t, 4> y_4 = y;
+    FixedPt<int16_t, 4> x_4 = x;
+    FixedPt<int16_t, 4> y_4 = y;
     REQUIRE(int(x_4) == 3);
     REQUIRE(float(y_4) == 0.5f);
 
-    fixedPt<int16_t, 12> x_12 = x;
-    fixedPt<int16_t, 12> y_12 = y;
+    FixedPt<int16_t, 12> x_12 = x;
+    FixedPt<int16_t, 12> y_12 = y;
     REQUIRE(int(x_12) == 3);
     REQUIRE(float(y_12) == 0.5f);
 

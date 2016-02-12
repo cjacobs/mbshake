@@ -1,4 +1,4 @@
-#include "delayBuffer.h"
+#include "DelayBuffer.h"
 
 #include "catch.hpp"
 
@@ -9,7 +9,7 @@
 //
 TEST_CASE("delayBuffer test")
 {
-    delayBuffer<int, 5> delayBuf;
+    DelayBuffer<int, 5> delayBuf;
 
     for (int index = 0; index < 6; index++)
     {
