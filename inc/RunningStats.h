@@ -17,6 +17,44 @@ public:
 // Uses include extracting a single element from a vector (using e.g., the GetX accessor class)
 // An Accessor has a single static function get_val() that takes a value of type S and returns a value of type T
 //  (maybe we should call it a transformer...)
+
+template <int WindowSize, int BufferSize, typename T, typename S=T, typename Accessor=IdentityAccessor<S>>
+class RunningMean
+{
+public:
+    RunningMean(DelayBuffer<S, BufferSize>& delayLine) : delayLine_(delayLine)
+    {
+    }
+
+    void addSample(const S& val) // must always call this after adding sample to delay buffer
+    {
+        // subtract old value
+        T oldVal = (T)(Accessor::get_val(delayLine_.getDelayedSample(windowSize_)));
+        accumSum_ -= oldVal;
+        
+        // add new one
+        T newVal = (T)(Accessor::get_val(val));
+        accumSum_ += newVal;
+    }
+
+    T getMean()
+    {
+        return accumSum_ / windowSize_;
+    }
+
+    float getMeanFloat()
+    {
+        return (float)accumSum_ / windowSize_;
+    }
+
+private:
+    const int windowSize_ = WindowSize;
+    DelayBuffer<S, BufferSize>& delayLine_;
+
+    T accumSum_ = 0;
+};
+
+// RunningStats --- mean and variance
 template <int WindowSize, int BufferSize, typename T, typename S=T, typename Accessor=IdentityAccessor<S>>
 class RunningStats
 {
@@ -78,4 +116,11 @@ template<int BufferSize, typename T>
 RunningStats<BufferSize-1, BufferSize, T, T> makeStats(DelayBuffer<T, BufferSize>& delayLine)
 {
     return RunningStats<BufferSize-1, BufferSize, T>(delayLine);
+}
+
+// convenience function to make a RunningMean with window size 1 less than the input buffer size, and of the same type
+template<int BufferSize, typename T>
+RunningMean<BufferSize-1, BufferSize, T, T> makeRunningMean(DelayBuffer<T, BufferSize>& delayLine)
+{
+    return RunningMean<BufferSize-1, BufferSize, T>(delayLine);
 }

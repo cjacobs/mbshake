@@ -3,8 +3,9 @@
 #include "RunningStats.h"
 #include "EventThresholdFilter.h"
 #include "IirFilter.h"
-#include "GestureDetector.h"
 #include "MicroBitAccess.h"
+#include "FixedPt.h"
+#include "GestureDetector.h"
 
 #include <cmath>
 #include <cstdlib>
@@ -13,9 +14,8 @@ using std::max;
 
 const int sampleRate = 18; // in ms
 
-const float lowpassFilterCoeff = 0.8f;
-const float gravityFilterCoeff = 0.005f; // problem: gravity converges too slowly (?)
-const float gravityFilterThresh = 126;
+const float lowpassFilterCoeff = 0.875f;
+const float gravityFilterCoeff = 1/32.0;
 
 const float minLenThresh = 1; 
 
@@ -32,6 +32,7 @@ const float tapScaleDenominator = 2.5f;
 const float tapGateThresh1 = 25.0f; // variance of preceeding windown should be less than this
 
 
+
 // TODO:
 // * Maybe modulate the shake output slightly by the amount of energy? --- soft shakes
 //     return a very large prediction value --- often higher than a strong shake
@@ -39,8 +40,10 @@ const float tapGateThresh1 = 25.0f; // variance of preceeding windown should be 
 // * Maybe use max over some window instead of mean for shake pred value? (though this
 //     risks making transitory spikes last longer and be harder to filter out
 
-// TODO: still doesn't detect taps if device is anchored to table. Then, the var over the big window is [0,0,0,0,0... ~12, ...]
-// Maybe check if var over an even bigger window is exactly(ish) 0, and lower the threshold even more if so?
+// TODO: still doesn't detect taps if device is anchored to a solid
+// object (like atable). Then, the var over the big window is
+// [0,0,0,0,0... ~12, ...]  Maybe check if var over an even bigger
+// window is exactly(ish) 0, and lower the threshold even more if so?
 
 GestureDetector::GestureDetector() : gravityFilter(gravityFilterCoeff),
                                      tapLargeWindowStats(sampleDelayBuffer),
@@ -52,8 +55,6 @@ GestureDetector::GestureDetector() : gravityFilter(gravityFilterCoeff),
                                      dot4Stats(dotDelayBuffer4),
     shakeEventFilter(shakeGestureThreshold, shakeEventCountThreshold, shakeEventCountLowThreshold),
     tapEventFilter(tapGestureThreshold, tapEventCountThreshold, 0)
-
-    
 {
     // init() // ?
 }
@@ -63,10 +64,11 @@ void GestureDetector::init()
     // init gravity
     updateAccelerometer();
     auto sample = getAccelData();
-    floatVector3 floatSample = floatVector3(sample);
-    gravity = floatSample;
-    filteredSample = floatSample;
-    gravityFilter.init(floatSample);
+    filteredSample_t initFilterSample = filteredSample_t(sample);
+    gravity = initFilterSample;
+    filteredSample = initFilterSample;
+    gravityFilter.init(initFilterSample);
+    // lowpassFilter.init(initFilterSample);
 }
 
 byteVector3 quantizeSample(const byteVector3& b, int factor)
@@ -103,12 +105,11 @@ void GestureDetector::processDotFeature(const byteVector3& currentSample, int do
 void GestureDetector::processSample(byteVector3 sample)
 {
     lastRawSample = sample;
-    gravity = gravityFilter.filterSample(floatVector3(sample));
+    gravity = gravityFilter.filterSample(filteredSample_t(sample));
     
-    byteVector3 currentSample = byteVector3 { clampByte(sample.x-gravity.x),
-                                        clampByte(sample.y-gravity.y),
-                                        clampByte(sample.z-gravity.z) };
-    
+    byteVector3 currentSample = byteVector3 { clampByte((int)sample.x-(int)gravity.x),
+                                              clampByte((int)sample.y-(int)gravity.y),
+                                              clampByte((int)sample.z-(int)gravity.z) };
     lastFilteredSample = currentSample;
 
     // TODO: maybe we should somehow associate the stats objects with the delay lines
@@ -144,7 +145,7 @@ float GestureDetector::getTapPrediction()
     // increase output (when micro:bit is sitting on table, tap
     // amplitude is diminished)
 
-    float scale = fast_inv_sqrt(1.0 + quietVarDelay.getDelayedSample(tapK));
+    float scale = fast_inv_sqrt(1.0 + quietVarDelay.getDelayedSample(tapK)); 
     return tapImpulseWindowStats.getVar() * scale;
 }
 
@@ -205,6 +206,9 @@ int GestureDetector::detectGesture()
     float diagnosticVal = 0;
     if(isPrinting) diagnosticVal = getShakePrediction();
 
+    //    auto& printedSample = lastRawSample;
+    auto& outputSample = lastFilteredSample;
+
     if(shouldCheckTap)
     {
         float tapPredVal = getTapPrediction();
@@ -214,7 +218,7 @@ int GestureDetector::detectGesture()
             shakeEventFilter.reset();
             if(isPrinting)
             {
-                serialPrintLn("Tap\t", systemTime(), "\t", buttonA(), "\t", buttonB(), "\t", lastRawSample, "\t", diagnosticVal);
+                serialPrintLn("Tap\t", systemTime(), "\t", buttonA(), "\t", buttonB(), "\t", outputSample, "\t", diagnosticVal);
             }
             return MICROBIT_ACCELEROMETER_TAP;
         }
@@ -229,7 +233,7 @@ int GestureDetector::detectGesture()
             tapEventFilter.reset();
             if(isPrinting)
             {
-                serialPrintLn("Shake\t", systemTime(), "\t", buttonA(), "\t", buttonB(), "\t", lastRawSample, "\t", diagnosticVal);
+                serialPrintLn("Shake\t", systemTime(), "\t", buttonA(), "\t", buttonB(), "\t", outputSample, "\t", diagnosticVal);
             }
             return MICROBIT_ACCELEROMETER_SHAKE;
         }
@@ -241,7 +245,7 @@ int GestureDetector::detectGesture()
 
     if(isPrinting)
     {
-        serialPrintLn("\t", systemTime(), "\t", buttonA(), "\t", buttonB(), "\t", lastRawSample, "\t", diagnosticVal);
+        serialPrintLn("\t", systemTime(), "\t", buttonA(), "\t", buttonB(), "\t", outputSample, "\t", diagnosticVal);
     }
 
     return 0; // none

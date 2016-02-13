@@ -5,6 +5,14 @@
 #include "EventThresholdFilter.h"
 #include "Vector3.h"
 #include "IirFilter.h"
+#include "FixedPt.h"
+
+//using filteredComponent_t = float;
+using filteredComponent_t = fixed_9_7;
+using filteredSample_t = Vector3<filteredComponent_t>;
+
+// using filterCoeff_t = float;
+using filterCoeff_t = fixed_2_14; // Still doesn't work with fixed-point filter coefficients
 
 enum MicroBitAccelerometerEvents
     {
@@ -54,10 +62,10 @@ private:
     // Data
     int8_t state;
 
-    floatVector3 gravity;
-    floatVector3 filteredSample; // used when lowpass filtering
-
-    SimpleIirFilter<floatVector3, float> gravityFilter;
+    filteredSample_t gravity;
+    filteredSample_t filteredSample; // used when lowpass filtering
+    
+    SimpleIirFilter<filteredSample_t, filterCoeff_t> gravityFilter;
 
     // Global delay buffer for filtered, gravity-subtracted accel input
     DelayBuffer<byteVector3, delayBufferSize> sampleDelayBuffer;
@@ -71,16 +79,16 @@ private:
     
     // TODO: quantize these to shorts or something
     DelayBuffer<float, dotMeanWindow1 + 1> dotDelayBuffer1;
-    RunningStats<dotMeanWindow1, dotMeanWindow1+1, float> dot1Stats;
+    RunningMean<dotMeanWindow1, dotMeanWindow1+1, float> dot1Stats;
     
     DelayBuffer<float, dotMeanWindow2 + 1> dotDelayBuffer2;
-    RunningStats<dotMeanWindow2, dotMeanWindow2+1, float> dot2Stats;
+    RunningMean<dotMeanWindow2, dotMeanWindow2+1, float> dot2Stats;
     
     DelayBuffer<float, dotMeanWindow3 + 1> dotDelayBuffer3;
-    RunningStats<dotMeanWindow3, dotMeanWindow3+1, float> dot3Stats;
+    RunningMean<dotMeanWindow3, dotMeanWindow3+1, float> dot3Stats;
     
     DelayBuffer<float, dotMeanWindow4 + 1> dotDelayBuffer4;
-    RunningStats<dotMeanWindow4, dotMeanWindow4+1, float> dot4Stats;
+    RunningMean<dotMeanWindow4, dotMeanWindow4+1, float> dot4Stats;
     
     DelayBuffer<float, tapK+1> quietVarDelay;
 
@@ -94,7 +102,7 @@ private:
     float prevQuietVar = 0;
     
     // diagnostic stuff
-    bool isPrinting = true;
+    bool isPrinting = false;
     bool printShake = true;
     bool allowSlowGesture = false;
 

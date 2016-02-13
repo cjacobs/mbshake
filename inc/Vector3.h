@@ -1,6 +1,8 @@
 #pragma once
 #include "fastmath.h"
 
+#include <type_traits>
+
 template <typename T>
 struct Vector3
 {
@@ -32,6 +34,15 @@ struct Vector3
         x += v.x;
         y += v.y;
         z += v.z;
+    }
+
+    template <typename S=T>
+    typename std::enable_if<!std::is_floating_point<S>::value, void>::type
+    operator*=(S s)
+    {
+        x *= s;
+        y *= s;
+        z *= s;
     }
 
     void operator*=(float s)
@@ -71,16 +82,16 @@ Vector3<T> operator-(const Vector3<T>& a, const Vector3<T>& b)
     return Vector3<T>(a.x-b.x, a.y-b.y, a.z-b.z);
 }
 
-template <typename T>
-Vector3<T> operator*(float a, const Vector3<T>& b)
+template <typename S, typename T>
+Vector3<T> operator*(S a, const Vector3<T>& b)
 {
     return Vector3<T>(a*b.x, a*b.y, a*b.z);
 }
 
-template <typename T>
-Vector3<T> operator*(const Vector3<T>& b, float a)
+template <typename S, typename T>
+Vector3<T> operator*(const Vector3<T>& b, S a)
 {
-    return Vector3<T>(a*b.x, a*b.y, a*b.z);
+    return Vector3<T>(b.x*a, b.y*a, b.z*a);
 }
 
 template <typename T>
@@ -131,7 +142,6 @@ public:
         return temp;
     }
 };
-
 
 typedef Vector3<int8_t> byteVector3;
 typedef Vector3<short> shortVector3;

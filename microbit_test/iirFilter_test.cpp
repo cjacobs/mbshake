@@ -1,5 +1,5 @@
 #include "IirFilter.h"
-#include "FastMath.h"
+#include "FixedPt.h"
 
 #include "catch.hpp"
 
@@ -61,8 +61,8 @@ TEST_CASE("simpleIIRFilter_fixed")
 {
     float x = 0.0f;
 
-    fixed_16 alpha = 0.5;
-    SimpleIirFilter<fixed_16> filt(alpha);
+    fixed_9_7 alpha = 0.5;
+    SimpleIirFilter<fixed_9_7> filt(alpha);
     filt.init(1.0);
     vector<float> vals {10, 11, 12, 13, 14, 15, 16, 17, 18, 1, 2, 3, 4, 5};
     x = filt.filterSample(1.0);
