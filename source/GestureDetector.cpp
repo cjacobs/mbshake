@@ -87,6 +87,9 @@ void GestureDetector::processDotFeature(const byteVector3& currentSample, int do
     // omigosh... in the python code, we were severely clipping the data
     byteVector3 quantizedCurrentSample = quantizeSample(currentSample, quantRate);
 
+    // TODO: implement 
+
+
     float dot1a = dotNorm(quantizedCurrentSample, quantizeSample(sampleDelayBuffer.getDelayedSample(dotWavelength), quantRate), minLenThresh);
     float dot1b = dotNorm(quantizedCurrentSample, quantizeSample(sampleDelayBuffer.getDelayedSample(2 * dotWavelength), quantRate), minLenThresh);
 
@@ -127,7 +130,7 @@ void GestureDetector::processSample(byteVector3 sample)
     }
 }
 
-float GestureDetector::getShakePrediction()
+predictionValue_t GestureDetector::getShakePrediction()
 {    
     if(allowSlowGesture)
     {
@@ -139,7 +142,7 @@ float GestureDetector::getShakePrediction()
     }
 }
 
-float GestureDetector::getTapPrediction()
+predictionValue_t GestureDetector::getTapPrediction()
 {
     // If previous quiet window was very very quiet (e.g., 0), then
     // increase output (when micro:bit is sitting on table, tap
@@ -188,13 +191,13 @@ int GestureDetector::detectGesture()
     bool shouldCheckShake = shakeThreshStats.getVar() > shakeGateThreshSquared;
 
     // criterion 1: look for N samples worth of quiet
-    float quietVariance = tapLargeWindowStats.getVar();
+    auto quietVariance = tapLargeWindowStats.getVar();
     quietVarDelay.addSample(quietVariance);
 
     if (quietVariance <= tapGateThresh1)
     {
         tapCountdown1 = tapK;
-        prevQuietVar = quietVariance;
+        prevQuietVariance = quietVariance;
     }
     else if(tapCountdown1 > 0)
     {
@@ -226,7 +229,7 @@ int GestureDetector::detectGesture()
 
     if(shouldCheckShake)
     {
-        float shakePredVal = getShakePrediction();
+        auto shakePredVal = getShakePrediction();
         bool foundShake = shakeEventFilter.filterValue(shakePredVal);
         if(foundShake)
         {

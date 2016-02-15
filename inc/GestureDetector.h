@@ -11,6 +11,9 @@
 using filteredComponent_t = fixed_9_7;
 using filteredSample_t = Vector3<filteredComponent_t>;
 
+using predictionValue_t = float;
+//using predictionValue_t = fixed_9_7;
+
 // using filterCoeff_t = float;
 using filterCoeff_t = fixed_2_14; // Still doesn't work with fixed-point filter coefficients
 
@@ -37,8 +40,8 @@ private:
     template<typename MeanDelayType, typename MeanStatsType>
     void processDotFeature(const byteVector3& currentSample, int dotWavelength, MeanDelayType& meanDelay, MeanStatsType& delayDotStats);
 
-    float getShakePrediction();
-    float getTapPrediction();
+    predictionValue_t getShakePrediction();
+    predictionValue_t getTapPrediction();
     int detectGesture(); // needs to be called at 50hz (for now)
 
     // Compile-time constants (used as template parameters)
@@ -75,8 +78,11 @@ private:
     RunningStats<tapImpulseWindowSize, delayBufferSize, long, byteVector3, GetZ<int8_t>> tapImpulseWindowStats;
     
     // Shake gesture stats
+    // TODO: use fixed-pt instead of float
+    // (but first make it work)
     RunningStats<shakeStatsBufferSize, delayBufferSize, float, byteVector3, GetMagSq<int8_t, float>> shakeThreshStats;
     
+    // TODO: these can easily be fixed-pt (but check range of dotNorm function)
     // TODO: quantize these to shorts or something
     DelayBuffer<float, dotMeanWindow1 + 1> dotDelayBuffer1;
     RunningMean<dotMeanWindow1, dotMeanWindow1+1, float> dot1Stats;
@@ -92,14 +98,17 @@ private:
     
     DelayBuffer<float, tapK+1> quietVarDelay;
 
-    EventThresholdFilter<float> shakeEventFilter;
-    EventThresholdFilter<float> tapEventFilter;
+    // TODO: fixed-pt
+    EventThresholdFilter<predictionValue_t> shakeEventFilter;
+    EventThresholdFilter<predictionValue_t> tapEventFilter;
 
     // timing stuff
     unsigned long prevTime = 0;
 
     int tapCountdown1 = 0;
-    float prevQuietVar = 0;
+
+    // TODO:
+    float prevQuietVariance = 0;
     
     // diagnostic stuff
     bool isPrinting = false;
