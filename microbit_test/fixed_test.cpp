@@ -15,6 +15,38 @@ using std::endl;
 // FixedPt tests
 //
 
+template <typename Ta, typename Tb=Ta>
+void TestPlus(float a, float b)
+{
+    Ta fixedA(a);
+    Tb fixedB(b);
+    REQUIRE(float(fixedA+fixedB) == Approx(a+b));
+}
+
+template <typename T>
+void TestMinus(float a, float b)
+{
+    T fixedA(a);
+    T fixedB(b);
+    REQUIRE(float(fixedA-fixedB) == Approx(a-b));
+}
+
+template <typename T>
+void TestTimes(float a, float b)
+{
+    T fixedA(a);
+    T fixedB(b);
+    REQUIRE(float(fixedA*fixedB) == Approx(a*b));
+}
+
+template <typename T>
+void TestDiv(float a, float b)
+{
+    T fixedA(a);
+    T fixedB(b);
+    REQUIRE(float(fixedA/fixedB) == Approx(a/b).epsilon(0.01));
+}
+
 TEST_CASE("fixed_pt test")
 {
     FixedPt<int16_t, 8> x = 3;
@@ -38,17 +70,73 @@ TEST_CASE("fixed_pt test")
     REQUIRE(int(x_12) == 3);
     REQUIRE(float(y_12) == 0.5f);
 
-    // sqrt test
+
+    // arithmetic
     for (auto x : { 0.125f, 0.25f, 0.5f, 1.0f, 2.0f, 3.0f, 4.0f, 5.0f, 6.0f, 7.0f, 8.0f, 16.0f, 32.0f, 64.0f, 15.0f })
     {
-        fixed_9_7 y = x;
-        REQUIRE(float(y.sqrt()) == Approx(sqrtf(x)).epsilon(0.1));
+        for (auto y : { 0.125f, 0.25f, 0.5f, 1.0f, 2.0f, 3.0f, 4.0f, 5.0f, 6.0f, 7.0f, 8.0f, 16.0f, 32.0f, 64.0f, 15.0f })
+        {
+            TestPlus<fixed_9_7>(x, y);
+            TestMinus<fixed_9_7>(x, y);
+            if(x*y < fixed_9_7::max_int_value && x*y > fixed_9_7::min_int_value)
+            {
+                TestTimes<fixed_9_7>(x, y);
+            }
+
+            if(x/y < fixed_9_7::max_int_value && x/y > fixed_9_7::min_int_value)
+            {
+                TestDiv<fixed_9_7>(x, y);
+            }
+        }
+    }
+
+    // sqrt test
+    for (float x : { 0.125f, 0.25f, 0.5f, 1.0f, 2.0f, 3.0f, 4.0f, 5.0f, 6.0f, 7.0f, 8.0f, 16.0f, 32.0f, 64.0f, 15.0f })
+    {
+        FixedPt<short,4> y1 = x;
+        REQUIRE(float(y1.sqrt()) == Approx(sqrtf(x)).epsilon(0.1));
+
+        FixedPt<short,8> y2 = x;
+        REQUIRE(float(y2.sqrt()) == Approx(sqrtf(x)).epsilon(0.1));
+
+        if(x < FixedPt<short,12>::max_int_value)
+        {
+            FixedPt<short,12> y3 = x;
+            REQUIRE(float(y3.sqrt()) == Approx(sqrtf(x)).epsilon(0.1));
+        }
+    }
+
+    // recip sqrt test
+    for (float x : { 1.0f, 2.0f, 0.125f, 0.25f, 0.5f, 1.111f, 2.0f, 3.0f, 4.0f, 5.0f, 6.0f, 7.0f, 8.0f, 16.0f, 32.0f, 64.0f, 15.0f })
+    {
+        float y = 1.0 / sqrtf(x);
+
+        FixedPt<short,8> y16_8 = x;
+        REQUIRE(float(y16_8.inv_sqrt()) == Approx(y).epsilon(0.1));
+
+        FixedPt<short,6> y2 = x;
+        REQUIRE(float(y2.inv_sqrt()) == Approx(1.0 / sqrtf(x)).epsilon(0.1));
+
+        FixedPt<short,4> y1 = x;
+         REQUIRE(float(y1.inv_sqrt()) == Approx(y).epsilon(0.1));
+
+
+        //        if(x < FixedPt<short,12>::max_int_value)
+        //        {
+        //            FixedPt<short,12> y3 = x;
+        //        //            REQUIRE(float(y3.inv_sqrt()) == Approx(1.0 / sqrtf(x)).epsilon(0.1));
+        //        }
+
+        // forget 32-bit for now
+        //        FixedPt<int,8> y32_8 = x;
+        //        REQUIRE(float(y32_8.inv_sqrt()) == Approx(y).epsilon(0.1));
+
     }
 }
 
 
 
-TEST_CASE("timing tests")
+TEST_CASE("fixed_pt timing tests")
 {
 
 }
