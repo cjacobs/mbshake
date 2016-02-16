@@ -79,7 +79,6 @@ private:
     
     // Shake gesture stats
     // TODO: use fixed-pt instead of float
-    // (but first make it work)
     RunningStats<shakeStatsBufferSize, delayBufferSize, float, byteVector3, GetMagSq<int8_t, float>> shakeThreshStats;
     
     // TODO: these can easily be fixed-pt (but check range of dotNorm function)

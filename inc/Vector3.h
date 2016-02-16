@@ -1,5 +1,6 @@
 #pragma once
-#include "fastmath.h"
+#include "FastMath.h"
+#include "FixedPt.h"
 
 #include <type_traits>
 
@@ -16,9 +17,9 @@ struct Vector3
     template <typename S>
     explicit Vector3<T>(const Vector3<S>& v)
     {
-        x = v.x;
-        y = v.y;
-        z = v.z;
+        x = T(v.x);
+        y = T(v.y);
+        z = T(v.z);
     }
 
     // math
@@ -178,6 +179,24 @@ float dotNorm(const Vector3<T>& a, const Vector3<T>& b, float minLenThresh)
 
     float bdota = dot(a,b);
     return bdota * fast_inv_sqrt(aLenSq*bLenSq);
+}
+
+// dotNorm must be in [-1,1]
+template <typename T>
+fixed_8_8 dotNormFixed(const Vector3<T>& a, const Vector3<T>& b, fixed_9_7 minLenThresh)
+{
+    // ugh, aLenSq and bLenSq will overflow their datatypes
+    auto aLenSq = dot(a,a);
+    auto bLenSq = dot(b,b);
+
+    if (aLenSq < minLenThresh || bLenSq < minLenThresh)
+    {
+        return T(0);
+    }
+
+    fixed_16_0 bdota = dot(a,b); // ugh, need dot-product (and multiply) that returns fixed pt thing of correct size
+    return bdota * fast_inv_sqrt(aLenSq*bLenSq); // somehow do this intelligently
+    
 }
 
 template <typename T>

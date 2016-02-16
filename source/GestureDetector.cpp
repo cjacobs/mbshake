@@ -45,7 +45,7 @@ const float tapGateThresh1 = 25.0f; // variance of preceeding windown should be 
 // [0,0,0,0,0... ~12, ...]  Maybe check if var over an even bigger
 // window is exactly(ish) 0, and lower the threshold even more if so?
 
-GestureDetector::GestureDetector() : gravityFilter(gravityFilterCoeff),
+GestureDetector::GestureDetector() : gravityFilter(filterCoeff_t(gravityFilterCoeff)),
                                      tapLargeWindowStats(sampleDelayBuffer),
                                      tapImpulseWindowStats(sampleDelayBuffer),
                                      shakeThreshStats(sampleDelayBuffer),
@@ -81,14 +81,13 @@ byteVector3 quantizeSample(const byteVector3& b, int factor)
 template<typename MeanDelayType, typename MeanStatsType>
 void GestureDetector::processDotFeature(const byteVector3& currentSample, int dotWavelength, MeanDelayType& meanDelay, MeanStatsType& delayDotStats)
 {
-    // TODO: investigate if this really help like it appears to do in the python version
+    // TODO: investigate if this really helps like it appears to do in the python version
     int quantRate = 16;
 
     // omigosh... in the python code, we were severely clipping the data
     byteVector3 quantizedCurrentSample = quantizeSample(currentSample, quantRate);
 
-    // TODO: implement 
-
+    // TODO: implement fixed-pt versions of dotNorm
 
     float dot1a = dotNorm(quantizedCurrentSample, quantizeSample(sampleDelayBuffer.getDelayedSample(dotWavelength), quantRate), minLenThresh);
     float dot1b = dotNorm(quantizedCurrentSample, quantizeSample(sampleDelayBuffer.getDelayedSample(2 * dotWavelength), quantRate), minLenThresh);

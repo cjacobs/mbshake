@@ -6,6 +6,9 @@
 
 #include <array>
 #include <algorithm>
+#include <cmath>
+
+using std::abs;
 
 // Simple 1-tap IIR filter with a = {-alpha} and b = {1-alpha}
 inline void filterVec(const floatVector3& vec, floatVector3& prevVec, float alpha)
@@ -30,11 +33,11 @@ inline void filterVec(const floatVector3& vec, floatVector3& prevVec, float alph
 }
 
 
-template <typename Tdata, typename Talpha=Tdata>
+template <typename Tdata, typename Tcoeff=Tdata>
 class SimpleIirFilter
 {
 public:
-    SimpleIirFilter(Talpha alpha) : alpha_(alpha), prevVal_(Tdata())
+    SimpleIirFilter(Tcoeff alpha) : alpha_(alpha), prevVal_(Tdata())
     { }
     
     void init(const Tdata& data)
@@ -54,7 +57,7 @@ public:
     }
 
 private:
-    Talpha alpha_;
+    Tcoeff alpha_;
     Tdata prevVal_;
 };
 
@@ -69,25 +72,25 @@ private:
 //   y[t] = x[t]*b0 + x[t-1]*b[0] + x[t-2]*b[1] + ... 
 //                  - y[t-1]*a[0] - y[t-2]*b[1] ...
 
-template <typename T, int N, int M>
+template <typename Tdata, int N, int M, typename Tcoeff=Tdata>
 class IirFilter
 {
 public:
-    IirFilter(const std::array<float, N>& b, const std::array<float, M>& a); // pass in a[1:], assuming a[0] == 1.0
-    T filterSample(const T& x);
+    IirFilter(const std::array<Tcoeff, N>& b, const std::array<Tcoeff, M>& a); // pass in a[1:], assuming a[0] == 1.0
+    Tdata filterSample(const Tdata& x);
 
 private:
-    std::array<float, M> a_; // feedback (y) coefficients
-    std::array<float, (N>0?N-1:0)> b_; // feed-forward (x) coefficients
-    float b0_ = 0.0f; // first b coefficient (separate just to make code nicer in filterSample)
+    std::array<Tcoeff, M> a_; // feedback (y) coefficients
+    std::array<Tcoeff, (N>0?N-1:0)> b_; // feed-forward (x) coefficients
+    Tcoeff b0_ = Tcoeff(0); // first b coefficient (separate just to make code nicer in filterSample)
 
-    RingBuffer<T, M> y_prev_;
-    RingBuffer<T, (N>0?N-1:0)> x_prev_;
+    RingBuffer<Tdata, M> y_prev_;
+    RingBuffer<Tdata, (N>0?N-1:0)> x_prev_;
 
 };
 
-template <typename T, int N, int M>
-IirFilter<T,N,M>::IirFilter(const std::array<float, N>& b, const std::array<float, M>& a)
+template <typename Tdata, int N, int M, typename Tcoeff>
+IirFilter<Tdata,N,M,Tcoeff>::IirFilter(const std::array<Tcoeff, N>& b, const std::array<Tcoeff, M>& a)
 {
     a_ = a;
     if(N > 0)
@@ -101,10 +104,10 @@ IirFilter<T,N,M>::IirFilter(const std::array<float, N>& b, const std::array<floa
     }
 }
 
-template <typename T, int N, int M>
-T IirFilter<T,N,M>::filterSample(const T& x)
+template <typename Tdata, int N, int M, typename Tcoeff>
+Tdata IirFilter<Tdata,N,M,Tcoeff>::filterSample(const Tdata& x)
 {
-    T y = b0_*x;
+    Tdata y = b0_*x;
     for(int index = 0; index < (int)b_.size(); index++)
     {
         y += b_[index]*x_prev_[-index];

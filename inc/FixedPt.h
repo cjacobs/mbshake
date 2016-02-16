@@ -5,9 +5,10 @@
 #include <limits>
 #include <type_traits>
 
-#include <iostream>
-using std::cout;
-using std::endl;
+//#include <iostream>
+//using std::cout;
+//using std::endl;
+//#include <iomanip>
 
 namespace
 {
@@ -30,7 +31,7 @@ namespace
         }
     }
 
-    int leading_zeros (uint16_t a)
+    inline int leading_zeros (uint16_t a)
     {
         uint32_t r = 16;
         if (a >= 0x00000100) { a >>=  8; r -=  8; }
@@ -40,7 +41,7 @@ namespace
         return r;
     }
 
-    int leading_zeros (uint32_t a)
+    inline int leading_zeros (uint32_t a)
     {
         uint32_t r = 32;
         if (a >= 0x00010000) { a >>= 16; r -= 16; }
@@ -156,6 +157,7 @@ namespace
         {
             hiPart = ~0;
         }
+        
         return (hiPart << x3Bits) | loPart;
     }
 
@@ -176,10 +178,13 @@ namespace
     constexpr int cBits = 12;
     constexpr int tBits = 4;
 
+    // TODO: get
+
     // lookup table for 16-bit fixed-pt inv sqrt
     // upper 12 bits store y^3 in 0.12 format, lower 4 store 3y in 2.2
     uint16_t inv_sqrt_table[] = // 12-entry version
         {
+#if 0
             gen_entry<uint16_t>(1.0,  cBits, tBits),
             gen_entry<uint16_t>(1.25, cBits, tBits),
             gen_entry<uint16_t>(1.5,  cBits, tBits),
@@ -205,6 +210,20 @@ namespace
             // x = 11.01 = 3.25, y = 0.554700196, 3y = 1.664100588, y^3 = 34.328125
             // x = 11.10 = 3.5,  y = 0.534522483, 3y = 1.603567451, y^3 = 42.875
             // x = 11.11 = 3.75, y = 0.516397779, 3y = 1.549193338, y^3 = 52.734375
+#else
+                0xfffc,
+                0xb72a,
+                0x8b59,
+                0x6e99,
+                0x5a88,
+                0x4bd8,
+                0x40c7,
+                0x3827,
+                0x3146,
+                0x2bb6,
+                0x2716,
+                0x2346
+#endif                
         };
     
     
@@ -219,12 +238,19 @@ class FixedPt
 {
 public:
     FixedPt() : value_(0) {}
-    FixedPt(int val) : value_(val << Mbits) {}
-    FixedPt(float val) : value_(T(val * (1 << Mbits))) {}
-    FixedPt(double val) : value_(T(val * (1 << Mbits))) {}
     FixedPt(const FixedPt<T, Mbits>& x) : value_(x.value_) {}
 
-    void operator=(const FixedPt<T, Mbits>& x)
+    explicit FixedPt(int val) : value_(val << Mbits) {}
+
+    explicit FixedPt(float val) : value_(T(val * (1 << Mbits))) 
+    {
+    }
+
+    explicit FixedPt(double val) : value_(T(val * (1 << Mbits))) 
+    {
+    }
+
+    void operator =(const FixedPt<T, Mbits>& x)
     {
         value_ = x.value_;
     }
@@ -270,6 +296,11 @@ public:
         value_ += x.value_;
     }
 
+FixedPt<T, Mbits> operator -()
+{
+return FixedPt<T, Mbits>(-value_, true);
+}
+
     void operator -=(int x)
     {
         value_ -= (x<<Mbits);
@@ -286,11 +317,13 @@ public:
         long long prod = value_ * x.value_;
         value_ = prod >> Mbits2;
     }
+    /*
 
     void operator *=(float s)
     {
         value_ *= s;
     }
+    */
     
     void operator /=(float s)
     {
@@ -346,13 +379,15 @@ public:
         return result;
     }
 
+    /*
     FixedPt<T, Mbits> operator *(float b) const
     {
         FixedPt<T, Mbits> result(*this);
         result *= b;
         return result;
     }
-
+    */
+    
     template <typename S>
     FixedPt<T, Mbits> operator /(const S& b) const
     {
@@ -461,11 +496,8 @@ public:
         
         // check this:
         uint32_t y = (threeY - (((bigger_t)yCubed*val)>>nBits)); // y is 3y/2 + xy^3/2 ---  in 1.X fixed format 
-        
         uint32_t s = ((bigger_t)y*val) >> nBits; // s = y*x in 3.X fixed 
-
         const uint32_t three = 0x03 << (nBits-4); // 3 in 4.X fixed, == 3/2 in 3.X fixed
-
         s = three - (((bigger_t)y*s)>>nBits); // s now = 3 - y^2*x in 4.X fixed
         y = ((bigger_t)y*s) >> nBits; // now y = y(3-y^2*x) in 5.X fixed == (3/2)y - y^2*x/2 in 4.X fixed
 
@@ -500,6 +532,23 @@ public:
         return result;
     }
 
+    /*
+      // 
+void printTable()
+{
+cout << "uint16_t inv_sqrt_table[] = // 12-entry version" << endl;
+cout << \t{" << endl;
+
+int numEntries = sizeof(inv_sqrt_table)/sizeof(inv_sqrt_table[0];
+for(int index = 0; index < numEntries); index++)
+ {
+     char delim = (index == numEntries-1) ? ' ' : ',';
+     cout << "\t0x" << std::hex << inv_sqrt_table[index] << delim << endl;
+ }
+ cout << "\t};" << endl;
+}
+    */
+
 private:
     template <typename U, int Mbits2>
     friend class FixedPt;
@@ -519,5 +568,13 @@ FixedPt<T, Mbits> operator *(const S& a, FixedPt<T, Mbits> b)
 typedef FixedPt<int16_t, 14> fixed_2_14;
 typedef FixedPt<int16_t, 8> fixed_8_8;
 typedef FixedPt<int16_t, 7> fixed_9_7;
+typedef FixedPt<int16_t, 0> fixed_16_0;
 
 
+
+// TODO:
+// * have operations return result w/ correct # fraction bits
+//   mul: intBits = a.intBits + b.intBits
+//   div: implement as a * b.reciprocal()
+//   implement reciprocal(): not sure how many bits --- maybe just swap int and fraction? (smallest number is 0.00001, which translates to 10000, right? 1/2^-M = 2M
+//   make a multInto op if we want to specify the format of the result of multiplying

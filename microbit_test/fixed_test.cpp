@@ -49,8 +49,8 @@ void TestDiv(float a, float b)
 
 TEST_CASE("fixed_pt test")
 {
-    FixedPt<int16_t, 8> x = 3;
-    FixedPt<int16_t, 8> y = 0.5f;
+    FixedPt<int16_t, 8> x = FixedPt<int16_t, 8>(3);
+    FixedPt<int16_t, 8> y = FixedPt<int16_t, 8>(0.5f);
 
     REQUIRE(int(x) == 3);
     REQUIRE(float(x) == 3.0f);
@@ -93,15 +93,15 @@ TEST_CASE("fixed_pt test")
     // sqrt test
     for (float x : { 0.125f, 0.25f, 0.5f, 1.0f, 2.0f, 3.0f, 4.0f, 5.0f, 6.0f, 7.0f, 8.0f, 16.0f, 32.0f, 64.0f, 15.0f })
     {
-        FixedPt<short,4> y1 = x;
+        FixedPt<int16_t,4> y1 = FixedPt<int16_t, 4>(x);
         REQUIRE(float(y1.sqrt()) == Approx(sqrtf(x)).epsilon(0.1));
 
-        FixedPt<short,8> y2 = x;
+        FixedPt<int16_t,8> y2 = FixedPt<int16_t, 8>(x);
         REQUIRE(float(y2.sqrt()) == Approx(sqrtf(x)).epsilon(0.1));
 
-        if(x < FixedPt<short,12>::max_int_value)
+        if(x < FixedPt<int16_t,12>::max_int_value)
         {
-            FixedPt<short,12> y3 = x;
+            FixedPt<int16_t,12> y3 = FixedPt<int16_t,12>(x);
             REQUIRE(float(y3.sqrt()) == Approx(sqrtf(x)).epsilon(0.1));
         }
     }
@@ -111,19 +111,19 @@ TEST_CASE("fixed_pt test")
     {
         float y = 1.0 / sqrtf(x);
 
-        FixedPt<short,8> y16_8 = x;
+        FixedPt<int16_t,8> y16_8 = FixedPt<int16_t, 8>(x);
         REQUIRE(float(y16_8.inv_sqrt()) == Approx(y).epsilon(0.1));
 
-        FixedPt<short,6> y2 = x;
+        FixedPt<int16_t,6> y2 = FixedPt<int16_t, 6>(x);
         REQUIRE(float(y2.inv_sqrt()) == Approx(1.0 / sqrtf(x)).epsilon(0.1));
 
-        FixedPt<short,4> y1 = x;
+        FixedPt<int16_t,4> y1 = FixedPt<int16_t, 4>(x);
          REQUIRE(float(y1.inv_sqrt()) == Approx(y).epsilon(0.1));
 
 
-        //        if(x < FixedPt<short,12>::max_int_value)
+        //        if(x < FixedPt<int16_t,12>::max_int_value)
         //        {
-        //            FixedPt<short,12> y3 = x;
+        //            FixedPt<int16_t,12> y3 = x;
         //        //            REQUIRE(float(y3.inv_sqrt()) == Approx(1.0 / sqrtf(x)).epsilon(0.1));
         //        }
 
