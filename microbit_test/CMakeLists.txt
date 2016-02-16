@@ -26,6 +26,7 @@ set (SRC ../source/GestureDetector.cpp
          delayBuffer_test.cpp
          fastmath_test.cpp
          fixed_test.cpp
+         fixed_vector_test.cpp
 		 iirFilter_test.cpp
 		 ringBuffer_test.cpp
 		 runningStats_test.cpp

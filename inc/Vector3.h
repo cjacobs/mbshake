@@ -144,18 +144,70 @@ public:
     }
 };
 
+template <typename T>
+struct DotType{};
+
+template <> struct DotType<int8_t>
+{
+public:
+    using type = float;
+};
+
+template <> struct DotType<int16_t>
+{
+public:
+    using type = float;
+};
+
+template <> struct DotType<int32_t>
+{
+public:
+    using type = float;
+};
+
+template <> struct DotType<int64_t>
+{
+public:
+    using type = float;
+};
+
+template <> struct DotType<float>
+{
+public:
+    using type = float;
+};
+
+template <> struct DotType<double>
+{
+public:
+    using type = double;
+};
+
+template<typename S, int Mb> struct DotType<FixedPt<S, Mb>>
+{
+ public:
+    using type = FixedPt<S, Mb>;
+};
+
 typedef Vector3<int8_t> byteVector3;
-typedef Vector3<short> shortVector3;
 typedef Vector3<float> floatVector3;
 
-template<typename T>
+template <typename T>
+typename DotType<T>::type dot(const Vector3<T>& a, const Vector3<T>& b)
+{
+    return typename DotType<T>::type(a.x*b.x + a.y*b.y + a.z*b.z);    
+}
+
+/*
+template <typename T>
 float dot(const Vector3<T>& a, const Vector3<T>& b)
 {
     return float(a.x*b.x + a.y*b.y + a.z*b.z);
 }
+*/
 
 template <typename T>
-float normSq(const Vector3<T>& v)
+typename DotType<T>::type normSq(const Vector3<T>& v)
 {
     return dot(v,v);
 }
@@ -167,10 +219,25 @@ float norm(const Vector3<T>& v)
 }
 
 template <typename T>
+float dotNorm(const Vector3<T>& a, const Vector3<T>& b)
+{
+    float aLenSq = normSq(a);
+    float bLenSq = normSq(b);
+
+    if (aLenSq == T(0) || bLenSq == T(0))
+    {
+        return 0; // infinity, really
+    }
+
+    float bdota = dot(a,b);
+    return bdota * fast_inv_sqrt(aLenSq*bLenSq);
+}
+
+template <typename T>
 float dotNorm(const Vector3<T>& a, const Vector3<T>& b, float minLenThresh)
 {
-    float aLenSq = dot(a,a);
-    float bLenSq = dot(b,b);
+    float aLenSq = normSq(a);
+    float bLenSq = normSq(b);
 
     if (aLenSq < minLenThresh || bLenSq < minLenThresh)
     {
@@ -182,21 +249,38 @@ float dotNorm(const Vector3<T>& a, const Vector3<T>& b, float minLenThresh)
 }
 
 // dotNorm must be in [-1,1]
-template <typename T>
-fixed_8_8 dotNormFixed(const Vector3<T>& a, const Vector3<T>& b, fixed_9_7 minLenThresh)
+template <typename T, int M>
+FixedPt<T,M> dotNormFixed(const Vector3<FixedPt<T,M>>& a, const Vector3<FixedPt<T,M>>& b)
 {
     // ugh, aLenSq and bLenSq will overflow their datatypes
-    auto aLenSq = dot(a,a);
-    auto bLenSq = dot(b,b);
+    auto aLenSq = normSq(a);
+    auto bLenSq = normSq(b);
+
+    if (aLenSq == FixedPt<T,M>(0) || bLenSq == FixedPt<T,M>(0))
+    {
+        return FixedPt<T,M>(0);
+    }
+
+    auto denom = aLenSq*bLenSq;
+    auto bdota = dot(a,b); // ugh, need dot-product (and multiply) that returns fixed pt thing of correct size
+    return bdota * denom.inv_sqrt(); // somehow do this intelligently
+}
+
+// dotNorm must be in [-1,1]
+template <typename T, int M>
+FixedPt<T,M> dotNormFixed(const Vector3<FixedPt<T,M>>& a, const Vector3<FixedPt<T,M>>& b, const FixedPt<T,M> minLenThresh)
+{
+    // ugh, aLenSq and bLenSq will overflow their datatypes
+    auto aLenSq = normSq(a);
+    auto bLenSq = normSq(b);
 
     if (aLenSq < minLenThresh || bLenSq < minLenThresh)
     {
-        return T(0);
+        return FixedPt<T,M>(0);
     }
 
     fixed_16_0 bdota = dot(a,b); // ugh, need dot-product (and multiply) that returns fixed pt thing of correct size
     return bdota * fast_inv_sqrt(aLenSq*bLenSq); // somehow do this intelligently
-    
 }
 
 template <typename T>

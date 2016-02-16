@@ -47,7 +47,7 @@ void TestDiv(float a, float b)
     REQUIRE(float(fixedA/fixedB) == Approx(a/b).epsilon(0.01));
 }
 
-TEST_CASE("fixed_pt test")
+TEST_CASE("fixed_pt")
 {
     FixedPt<int16_t, 8> x = FixedPt<int16_t, 8>(3);
     FixedPt<int16_t, 8> y = FixedPt<int16_t, 8>(0.5f);
