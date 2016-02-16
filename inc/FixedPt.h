@@ -52,10 +52,37 @@ namespace
         return r;
     }
 
-    template <typename T>
-    struct num_bits
+    //
+    // int_of_size
+    //
+    template <int S> struct int_of_size {};
+
+    template <>
+    struct int_of_size<8>
     {
+        using type = int8_t;
+        using utype = uint8_t;
     };
+
+    template <>
+    struct int_of_size<16>
+    {
+        using type = int16_t;
+        using utype = uint16_t;
+    };
+
+    template <>
+    struct int_of_size<32>
+    {
+        using type = int32_t;
+        using utype = uint32_t;
+    };
+
+
+    //
+    // num_bits
+    //
+    template <typename T> struct num_bits {};
 
     template <>
     struct num_bits<int8_t>
@@ -93,48 +120,51 @@ namespace
         static constexpr int value = 32;
     };
 
+    //
+    // next_bigger_int
+    //
     template <typename T>
-    struct bigger_int
+    struct next_bigger_int
     {
     };
 
     template <>
-    struct bigger_int<int8_t>
+    struct next_bigger_int<int8_t>
     {
     public:
         typedef int16_t type;
     };
 
     template <>
-    struct bigger_int<uint8_t>
+    struct next_bigger_int<uint8_t>
     {
     public:
         typedef uint16_t type;
     };
 
     template <>
-    struct bigger_int<int16_t>
+    struct next_bigger_int<int16_t>
     {
     public:
         typedef int32_t type;
     };
 
     template <>
-    struct bigger_int<uint16_t>
+    struct next_bigger_int<uint16_t>
     {
     public:
         typedef uint32_t type;
     };
 
     template <>
-    struct bigger_int<int32_t>
+    struct next_bigger_int<int32_t>
     {
     public:
         typedef int64_t type;
     };
 
     template <>
-    struct bigger_int<uint32_t>
+    struct next_bigger_int<uint32_t>
     {
     public:
         typedef uint64_t type;
@@ -233,62 +263,68 @@ namespace
 // http://stackoverflow.com/questions/6286450/inverse-sqrt-for-fixed-point
 // also: http://www.realitypixels.com/turk/computergraphics/FixedSqrt.pdf
 
-template <typename T, int Mbits>
+template <int IntBits, int FracBits, typename T = typename int_of_size<IntBits+FracBits>::type>
 class FixedPt
 {
 public:
     FixedPt() : value_(0) {}
-    FixedPt(const FixedPt<T, Mbits>& x) : value_(x.value_) {}
+    FixedPt(const FixedPt<IntBits, FracBits, T>& x) : value_(x.value_) {}
 
-    explicit FixedPt(int val) : value_(val << Mbits) {}
+    explicit FixedPt(int val) : value_(val << FracBits) {}
 
-    explicit FixedPt(float val) : value_(T(val * (1 << Mbits))) 
+    explicit FixedPt(float val) : value_(T(val * (1 << FracBits))) 
     {
     }
 
-    explicit FixedPt(double val) : value_(T(val * (1 << Mbits))) 
+    explicit FixedPt(double val) : value_(T(val * (1 << FracBits))) 
     {
     }
 
-    void operator =(const FixedPt<T, Mbits>& x)
+    template <int IntBits2, int FracBits2>
+    FixedPt(const FixedPt<IntBits2, FracBits2, T>& x)
+    {
+        value_ = ShiftValue<FracBits, FracBits2>(x.value_);
+    }
+
+    void operator =(const FixedPt<IntBits, FracBits, T>& x)
     {
         value_ = x.value_;
     }
 
-    template <int Mbits2>
-    FixedPt(const FixedPt<T, Mbits2>& x)
+    bool operator ==(FixedPt<IntBits, FracBits, T> x)
     {
-        value_ = ShiftValue<Mbits, Mbits2>(x.value_);
+    return value_ == x.value_;
     }
 
-    static const int max_int_value = std::numeric_limits<T>::max() >> Mbits;
-    static const int min_int_value = std::numeric_limits<T>::min() >> Mbits;
-    static const int mantissa_bits = Mbits;
+    static const int max_int_value = std::numeric_limits<T>::max() >> FracBits;
+    static const int min_int_value = std::numeric_limits<T>::min() >> FracBits;
+    static const int int_bits = IntBits;
+    static const int frac_bits = FracBits;
 
     operator int() const
     {
-        return value_ >> Mbits;
+        return value_ >> FracBits;
     }
 
     operator long int() const
     {
-        return value_ >> Mbits;
+        return value_ >> FracBits;
     }
 
     operator float() const
     {
-        return float(value_) / float(1 << Mbits);
+        return float(value_) / float(1 << FracBits);
     }
 
     operator double() const
     {
-        return double(value_) / double(1 << Mbits);
+        return double(value_) / double(1 << FracBits);
     }
 
     // arithmetic ops: +, -, *, / (?)
     void operator +=(int x)
     {
-        value_ += (x<<Mbits);
+        value_ += (x<<FracBits);
     }
 
     void operator +=(const FixedPt& x)
@@ -296,29 +332,29 @@ public:
         value_ += x.value_;
     }
 
-FixedPt<T, Mbits> operator -()
-{
-return FixedPt<T, Mbits>(-value_, true);
-}
-
+    FixedPt<IntBits, FracBits, T> operator -()
+    {
+        return FixedPt<IntBits, FracBits, T>(-value_, true);
+    }
+    
     void operator -=(int x)
     {
-        value_ -= (x<<Mbits);
+        value_ -= (x<<FracBits);
     }
 
-    void operator -=(const FixedPt& x)
+    void operator -=(const FixedPt<IntBits, FracBits, T>& x)
     {
         value_ -= x.value_;
     }
 
-    template <int Mbits2>
-    void operator *=(const FixedPt<T, Mbits2>& x)
+    template <int IntBits2, int FracBits2>
+    void operator *=(const FixedPt<IntBits2, FracBits2, T>& x)
     {
         long long prod = value_ * x.value_;
-        value_ = prod >> Mbits2;
+        value_ = prod >> FracBits2;
     }
-    /*
 
+    /*
     void operator *=(float s)
     {
         value_ *= s;
@@ -332,71 +368,70 @@ return FixedPt<T, Mbits>(-value_, true);
 
 
     /* // TODO: check this
-    template <int Mbits2>
-    void operator /=(const FixedPt<T, Mbits2>& x)
+    template <int FracBits2>
+    void operator /=(const FixedPt<T, FracBits2>& x)
     {
         long long prod = value_ / x.value_;
-        value_ = prod << Mbits2;
+        value_ = prod << FracBits2;
     }
     */
     
     // TODO: Nope. need to implement this only for int, float, ...
-    FixedPt<T, Mbits> operator +(int b) const
+    FixedPt<IntBits, FracBits, T> operator +(int b) const
     {
-        FixedPt<T, Mbits> result(*this);
+        FixedPt<IntBits, FracBits, T> result(*this);
         result += b;
         return result;
     }
 
-    FixedPt<T, Mbits> operator +(float b) const
+    FixedPt<IntBits, FracBits, T> operator +(float b) const
     {
-        FixedPt<T, Mbits> result(*this);
+        FixedPt<IntBits, FracBits, T> result(*this);
         result += b;
         return result;
     }
 
-    // TODO:
-    template <int Mbits2>
-    FixedPt<T, Mbits> operator +(FixedPt<T, Mbits2> b) const
+    template <int IntBits2, int FracBits2>
+    FixedPt<IntBits, FracBits, T> operator +(FixedPt<IntBits2, FracBits2, T> b) const
     {
-        FixedPt<T, Mbits> result(*this);
+        FixedPt<IntBits, FracBits, T> result(*this);
         result += b;
         return result;
     }
 
     template <typename S>
-    FixedPt<T, Mbits> operator -(const S& b) const
+    FixedPt<IntBits, FracBits, T> operator -(const S& b) const
     {
-        FixedPt<T, Mbits> result(*this);
+        FixedPt<IntBits, FracBits, T> result(*this);
         result -= b;
         return result;
     }
 
-    FixedPt<T, Mbits> operator *(int b) const
+    FixedPt<IntBits, FracBits, T> operator *(int b) const
     {
-        FixedPt<T, Mbits> result(*this);
+        FixedPt<IntBits, FracBits, T> result(*this);
         result *= b;
         return result;
     }
 
     /*
-    FixedPt<T, Mbits> operator *(float b) const
+    FixedPt<T, FracBits> operator *(float b) const
     {
-        FixedPt<T, Mbits> result(*this);
+        FixedPt<T, FracBits> result(*this);
         result *= b;
         return result;
     }
     */
     
     template <typename S>
-    FixedPt<T, Mbits> operator /(const S& b) const
+    FixedPt<IntBits, FracBits, T> operator /(const S& b) const
     {
-        FixedPt<T, Mbits> result(*this);
+        FixedPt<IntBits, FracBits, T> result(*this);
         result /= b;
         return result;
     }
 
-    FixedPt<T, Mbits> sqrtx()
+    FixedPt<IntBits, FracBits, T> sqrtx()
     {
         // adapted from http://www.realitypixels.com/turk/computergraphics/FixedSqrt.pdf
         unsigned long root = 0;
@@ -404,7 +439,7 @@ return FixedPt<T, Mbits>(-value_, true);
         unsigned long remLo = value_;
         int count = 8; //?
         do {
-            remHi = (remHi << Mbits) | (remLo >> Mbits);
+            remHi = (remHi << FracBits) | (remLo >> FracBits);
             remLo <<= 2;
             root <<= 1;
             int testDiv = (root << 1) + 1;
@@ -415,21 +450,21 @@ return FixedPt<T, Mbits>(-value_, true);
 
         } while (count-- != 0);
         
-        return FixedPt<T, Mbits>(root, true);
+        return FixedPt<IntBits, FracBits, T>(root, true);
     }
 
     // my version
-    FixedPt<T, Mbits> sqrt()
+    FixedPt<IntBits, FracBits, T> sqrt()
     {
-        static const T lookupTable[16] = { 0, 1 << Mbits, sqrtVal<T,Mbits>(2), sqrtVal<T,Mbits>(3), sqrtVal<T,Mbits>(4), sqrtVal<T,Mbits>(5), sqrtVal<T,Mbits>(6), sqrtVal<T,Mbits>(7),
-            sqrtVal<T,Mbits>(8), sqrtVal<T,Mbits>(9), sqrtVal<T,Mbits>(10), sqrtVal<T,Mbits>(11), sqrtVal<T,Mbits>(12), sqrtVal<T,Mbits>(13), sqrtVal<T,Mbits>(14), sqrtVal<T,Mbits>(15) };
+        static const T lookupTable[16] = { 0, 1 << FracBits, sqrtVal<T,FracBits>(2), sqrtVal<T,FracBits>(3), sqrtVal<T,FracBits>(4), sqrtVal<T,FracBits>(5), sqrtVal<T,FracBits>(6), sqrtVal<T,FracBits>(7),
+            sqrtVal<T,FracBits>(8), sqrtVal<T,FracBits>(9), sqrtVal<T,FracBits>(10), sqrtVal<T,FracBits>(11), sqrtVal<T,FracBits>(12), sqrtVal<T,FracBits>(13), sqrtVal<T,FracBits>(14), sqrtVal<T,FracBits>(15) };
 
 
         // First try integer part
         unsigned int mask = 0b01111;
-        T intPart = value_ >> Mbits;
+        T intPart = value_ >> FracBits;
         T out = 0;
-        if(intPart != 0 || Mbits == 0)
+        if(intPart != 0 || FracBits == 0)
         {
             int n = 0;
             while (intPart != 0 && intPart != ~0)
@@ -444,9 +479,9 @@ return FixedPt<T, Mbits>(-value_, true);
             // shift left to fall on multiple of 4
             T tmp = value_;
             int outShift = 0;
-            int shift = (4-1) - ((Mbits-1)%4);
+            int shift = (4-1) - ((FracBits-1)%4);
             tmp <<= shift;
-            int numBlocks = (Mbits+shift)/4;
+            int numBlocks = (FracBits+shift)/4;
             int n = 2*numBlocks;
             while(tmp != 0 && tmp != ~0)
             {
@@ -456,20 +491,21 @@ return FixedPt<T, Mbits>(-value_, true);
             }
         }
 
-        return FixedPt<T, Mbits>(out, true);
+        return FixedPt<IntBits, FracBits, T>(out, true);
     }
 
+    // based on second answer of:
     // http://stackoverflow.com/questions/6286450/inverse-sqrt-for-fixed-point
-    FixedPt<T, Mbits> inv_sqrt()
+    FixedPt<IntBits, FracBits, T> inv_sqrt()
     {
         if(value_ <= 0) // 
         {
-            return FixedPt<T, Mbits>(~0, true);
+            return FixedPt<IntBits, FracBits, T>(~0, true);
         }
 
         constexpr int nBits = num_bits<T>::value;
         typedef typename std::make_unsigned<T>::type uT;
-        typedef typename bigger_int<T>::type bigger_t;
+        typedef typename next_bigger_int<T>::type bigger_t;
 
         uT val = static_cast<uT>(value_);
         int scale = leading_zeros(val) & (~0x01); // round scale down to be even
@@ -505,11 +541,11 @@ return FixedPt<T, Mbits>(-value_, true);
         // first convert to sqrt of input
         //        y = y >> (scale>>1);
 
-        // now convert to z.X fixed (where z = total_bits-Mbits)
+        // now convert to z.X fixed (where z = total_bits-FracBits)
         // y2 is in 4.X... 
 
-        constexpr int intBits = (nBits-Mbits);
-        constexpr int M_2 = Mbits >> 1;
+        constexpr int intBits = (nBits-FracBits);
+        constexpr int M_2 = FracBits >> 1;
 
         // phooey --- this only works when nBits == 16        
         int Z = 0;
@@ -527,7 +563,7 @@ return FixedPt<T, Mbits>(-value_, true);
         }
 
         uT newVal = y >> Z;
-        auto result = FixedPt<T, Mbits>(T(newVal), true);
+        auto result = FixedPt<IntBits, FracBits, T>(T(newVal), true);
         
         return result;
     }
@@ -542,7 +578,7 @@ cout << \t{" << endl;
 int numEntries = sizeof(inv_sqrt_table)/sizeof(inv_sqrt_table[0];
 for(int index = 0; index < numEntries); index++)
  {
-     char delim = (index == numEntries-1) ? ' ' : ',';
+      char delim = (index == numEntries-1) ? ' ' : ',';
      cout << "\t0x" << std::hex << inv_sqrt_table[index] << delim << endl;
  }
  cout << "\t};" << endl;
@@ -550,25 +586,29 @@ for(int index = 0; index < numEntries); index++)
     */
 
 private:
-    template <typename U, int Mbits2>
+    template <int IntBits2, int FracBits2, typename T2>
     friend class FixedPt;
 
     FixedPt(T val, bool) : value_(val) {}
     T value_;
 };
 
-template <typename T, int Mbits, typename S>
-FixedPt<T, Mbits> operator *(const S& a, FixedPt<T, Mbits> b)
-{
-    FixedPt<T, Mbits> result(b);
+    template <int IntBits, int FracBits, typename T, typename S>
+    FixedPt<IntBits, FracBits, T> operator *(const S& a, FixedPt<IntBits, FracBits, T> b)
+    {
+        FixedPt<IntBits, FracBits, T> result(b);
     result *= a;
     return result;
 }
 
-typedef FixedPt<int16_t, 14> fixed_2_14;
-typedef FixedPt<int16_t, 8> fixed_8_8;
-typedef FixedPt<int16_t, 7> fixed_9_7;
-typedef FixedPt<int16_t, 0> fixed_16_0;
+    typedef FixedPt<2, 14> fixed_2_14;
+    typedef FixedPt<4, 12> fixed_4_12;
+    typedef FixedPt<8, 8> fixed_8_8;
+    typedef FixedPt<9, 7> fixed_9_7;
+    typedef FixedPt<10, 6> fixed_10_6;
+typedef FixedPt<12, 4> fixed_12_4;
+typedef FixedPt<14, 2> fixed_14_2;
+typedef FixedPt<16, 0> fixed_16_0;
 
 
 

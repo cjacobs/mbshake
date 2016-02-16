@@ -183,10 +183,10 @@ public:
     using type = double;
 };
 
-template<typename S, int Mb> struct DotType<FixedPt<S, Mb>>
+template<int I, int F, typename T> struct DotType<FixedPt<I, F, T>>
 {
  public:
-    using type = FixedPt<S, Mb>;
+    using type = FixedPt<I, F, T>; // TODO: fix this
 };
 
 typedef Vector3<int8_t> byteVector3;
@@ -249,16 +249,16 @@ float dotNorm(const Vector3<T>& a, const Vector3<T>& b, float minLenThresh)
 }
 
 // dotNorm must be in [-1,1]
-template <typename T, int M>
-FixedPt<T,M> dotNormFixed(const Vector3<FixedPt<T,M>>& a, const Vector3<FixedPt<T,M>>& b)
+template <int I, int F, typename T>
+FixedPt<I,F,T> dotNormFixed(const Vector3<FixedPt<I,F,T>>& a, const Vector3<FixedPt<I,F,T>>& b)
 {
     // ugh, aLenSq and bLenSq will overflow their datatypes
     auto aLenSq = normSq(a);
     auto bLenSq = normSq(b);
 
-    if (aLenSq == FixedPt<T,M>(0) || bLenSq == FixedPt<T,M>(0))
+    if (aLenSq == FixedPt<I,F,T>(0) || bLenSq == FixedPt<I,F,T>(0))
     {
-        return FixedPt<T,M>(0);
+        return FixedPt<I,F,T>(0);
     }
 
     auto denom = aLenSq*bLenSq;
@@ -267,8 +267,8 @@ FixedPt<T,M> dotNormFixed(const Vector3<FixedPt<T,M>>& a, const Vector3<FixedPt<
 }
 
 // dotNorm must be in [-1,1]
-template <typename T, int M>
-FixedPt<T,M> dotNormFixed(const Vector3<FixedPt<T,M>>& a, const Vector3<FixedPt<T,M>>& b, const FixedPt<T,M> minLenThresh)
+template <int I, int F, typename T>
+FixedPt<I,F,T> dotNormFixed(const Vector3<FixedPt<I,F,T>>& a, const Vector3<FixedPt<I,F,T>>& b, const FixedPt<I,F,T> minLenThresh)
 {
     // ugh, aLenSq and bLenSq will overflow their datatypes
     auto aLenSq = normSq(a);
@@ -276,7 +276,7 @@ FixedPt<T,M> dotNormFixed(const Vector3<FixedPt<T,M>>& a, const Vector3<FixedPt<
 
     if (aLenSq < minLenThresh || bLenSq < minLenThresh)
     {
-        return FixedPt<T,M>(0);
+        return FixedPt<I,F,T>(0);
     }
 
     fixed_16_0 bdota = dot(a,b); // ugh, need dot-product (and multiply) that returns fixed pt thing of correct size
