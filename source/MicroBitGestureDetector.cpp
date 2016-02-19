@@ -5,7 +5,7 @@
 #include "IirFilter.h"
 #include "MicroBitAccess.h"
 #include "FixedPt.h"
-#include "GestureDetector.h"
+#include "MicroBitGestureDetector.h"
 
 #include <cmath>
 #include <cstdlib>
@@ -21,7 +21,10 @@ const float minLenThresh = 1;
 const float shakeGestureThreshold = 0.4f;
 const int shakeEventCountThreshold = 6;
 const int shakeEventCountLowThreshold = 3;
-const float shakeGateThreshSquared = 4; //000000.0f;
+
+#if USE_SHAKE_GATE
+const float shakeGateThreshSquared = 40000; //4000000.0f;
+#endif
 
 // Tap stuff
 const float tapGestureThreshold = 200.0f; // TODO: this can be an int
@@ -47,7 +50,9 @@ const float tapGateThresh1 = 25.0f; // variance of preceeding windown should be 
 GestureDetector::GestureDetector() : gravityFilter(gravityFilterCoeff),
                                      tapLargeWindowStats(sampleDelayBuffer),
                                      tapImpulseWindowStats(sampleDelayBuffer),
+#if USE_SHAKE_GATE
                                      shakeThreshStats(sampleDelayBuffer),
+#endif
                                      dot1Stats(dotDelayBuffer1),
                                      dot2Stats(dotDelayBuffer2),
                                      dot3Stats(dotDelayBuffer3),
@@ -117,7 +122,9 @@ void GestureDetector::processSample(byteVector3 sample)
     sampleDelayBuffer.addSample(currentSample); 
     tapLargeWindowStats.addSample(currentSample);
     tapImpulseWindowStats.addSample(currentSample);
+#if USE_SHAKE_GATE
     shakeThreshStats.addSample(currentSample);
+#endif
     
     // now add val to mean buffer
     processDotFeature(currentSample, dotWavelength2, dotDelayBuffer2, dot2Stats);
@@ -185,7 +192,11 @@ int GestureDetector::detectGesture()
     byteVector3 sample = getAccelData();
     
     bool shouldCheckTap = tapCountdown1 > 0;
+#if USE_SHAKE_GATE
     bool shouldCheckShake = shakeThreshStats.getVar() > shakeGateThreshSquared;
+#else
+    const bool shouldCheckShake = true;
+#endif
 
     // criterion 1: look for N samples worth of quiet
     auto quietVariance = tapLargeWindowStats.getVar();

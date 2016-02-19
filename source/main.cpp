@@ -1,6 +1,6 @@
 #include "Vector3.h"
 #include "FastMath.h"
-#include "GestureDetector.h"
+#include "MicroBitGestureDetector.h"
 
 #include "MicroBitTouchDevelop.h" // Only 1 source file can include this header
 

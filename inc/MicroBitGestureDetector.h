@@ -7,6 +7,11 @@
 #include "IirFilter.h"
 #include "FixedPt.h"
 
+
+// #defines for optional parts
+#define USE_SHAKE_GATE 1
+
+
 //using filteredComponent_t = float;
 using filteredComponent_t = fixed_9_7;
 using filteredSample_t = Vector3<filteredComponent_t>;
@@ -15,7 +20,7 @@ using predictionValue_t = float;
 //using predictionValue_t = fixed_9_7;
 
 // using filterCoeff_t = float;
-using filterCoeff_t = fixed_2_14; // Still doesn't work with fixed-point filter coefficients
+using filterCoeff_t = fixed_2_14;
 
 enum MicroBitAccelerometerEvents
     {
@@ -55,7 +60,7 @@ private:
     static constexpr int dotMeanWindow3 = dotWavelength3; // / 2;
     static constexpr int dotMeanWindow4 = dotWavelength4; // / 2;
     
-    static constexpr int shakeStatsBufferSize = 10;
+    static constexpr int shakeStatsBufferSize = 4;
     static constexpr int delayBufferSize = 2*(dotWavelength4) + shakeStatsBufferSize;
     static constexpr int tapK = 2;
 
@@ -78,8 +83,9 @@ private:
     RunningStats<tapImpulseWindowSize, delayBufferSize, long, byteVector3, GetZ<int8_t>> tapImpulseWindowStats;
     
     // Shake gesture stats
-    // TODO: use fixed-pt instead of float
+#if USE_SHAKE_GATE
     RunningStats<shakeStatsBufferSize, delayBufferSize, float, byteVector3, GetMagSq<int8_t, float>> shakeThreshStats;
+#endif
     
     // TODO: these can easily be fixed-pt (but check range of dotNorm function)
     // TODO: quantize these to shorts or something

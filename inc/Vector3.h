@@ -133,6 +133,7 @@ public:
     }
 };
 
+// TODO: make version of this that returns fixed pt or something
 template <typename T, typename U=T>
 class GetMagSq
 {
