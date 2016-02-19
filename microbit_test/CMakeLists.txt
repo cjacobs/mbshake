@@ -33,7 +33,8 @@ set (SRC ../source/GestureDetector.cpp
          vector3_test.cpp
          ${PROJ_NAME}.cpp)
 
-set (INCLUDE ../inc/DelayBuffer.h
+set (INCLUDE ../inc/BitUtil.h
+             ../inc/DelayBuffer.h
              ../inc/EventThresholdFilter.h
              ../inc/FastMath.h
 			 ../inc/FixedPt.h

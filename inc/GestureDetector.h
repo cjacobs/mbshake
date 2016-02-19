@@ -106,9 +106,6 @@ private:
 
     int tapCountdown1 = 0;
 
-    // TODO:
-    float prevQuietVariance = 0;
-    
     // diagnostic stuff
     bool isPrinting = false;
     bool printShake = true;

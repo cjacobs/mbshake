@@ -1,5 +1,7 @@
 #pragma once
 
+#include "BitUtil.h"
+
 #include <cstdint> // for int8_t, int32_t types
 #include <cmath>
 #include <limits>
@@ -17,152 +19,6 @@ namespace
     {
         return T(sqrtf(x) * (1 << Mbits));
     }
-
-    template <int M1, int M2>
-    constexpr int ShiftValue(int x)
-    {
-        return (M1 > M2) ? (x << (M1 - M2)) : (x >> (M2 - M1));
-    }
-
-    inline int leading_zeros (uint16_t a)
-    {
-        uint32_t r = 16;
-        if (a >= 0x00000100) { a >>=  8; r -=  8; }
-        if (a >= 0x00000010) { a >>=  4; r -=  4; }
-        if (a >= 0x00000004) { a >>=  2; r -=  2; }
-        r -= a - (a & (a >> 1));
-        return r;
-    }
-
-    inline int leading_zeros (uint32_t a)
-    {
-        uint32_t r = 32;
-        if (a >= 0x00010000) { a >>= 16; r -= 16; }
-        if (a >= 0x00000100) { a >>=  8; r -=  8; }
-        if (a >= 0x00000010) { a >>=  4; r -=  4; }
-        if (a >= 0x00000004) { a >>=  2; r -=  2; }
-        r -= a - (a & (a >> 1));
-        return r;
-    }
-
-    //
-    // int_of_size
-    //
-    template <int S> struct int_of_size {};
-
-    template <>
-    struct int_of_size<8>
-    {
-        using type = int8_t;
-        using utype = uint8_t;
-    };
-
-    template <>
-    struct int_of_size<16>
-    {
-        using type = int16_t;
-        using utype = uint16_t;
-    };
-
-    template <>
-    struct int_of_size<32>
-    {
-        using type = int32_t;
-        using utype = uint32_t;
-    };
-
-
-    //
-    // num_bits
-    //
-    template <typename T> struct num_bits {};
-
-    template <>
-    struct num_bits<int8_t>
-    {
-        static constexpr int value = 8;
-    };
-
-    template <>
-    struct num_bits<uint8_t>
-    {
-        static constexpr int value = 8;
-    };
-
-    template <>
-    struct num_bits<int16_t>
-    {
-        static constexpr int value = 16;
-    };
-
-    template <>
-    struct num_bits<uint16_t>
-    {
-        static constexpr int value = 16;
-    };
-
-    template <>
-    struct num_bits<int32_t>
-    {
-        static constexpr int value = 32;
-    };
-
-    template <>
-    struct num_bits<uint32_t>
-    {
-        static constexpr int value = 32;
-    };
-
-    //
-    // next_bigger_int
-    //
-    template <typename T>
-    struct next_bigger_int
-    {
-    };
-
-    template <>
-    struct next_bigger_int<int8_t>
-    {
-    public:
-        typedef int16_t type;
-    };
-
-    template <>
-    struct next_bigger_int<uint8_t>
-    {
-    public:
-        typedef uint16_t type;
-    };
-
-    template <>
-    struct next_bigger_int<int16_t>
-    {
-    public:
-        typedef int32_t type;
-    };
-
-    template <>
-    struct next_bigger_int<uint16_t>
-    {
-    public:
-        typedef uint32_t type;
-    };
-
-    template <>
-    struct next_bigger_int<int32_t>
-    {
-    public:
-        typedef int64_t type;
-    };
-
-    template <>
-    struct next_bigger_int<uint32_t>
-    {
-    public:
-        typedef uint64_t type;
-    };
-
 
     template <typename T>
     constexpr T fixed_cast(float x, int mbits)
@@ -269,15 +125,11 @@ public:
     FixedPt() : value_(0) {}
     FixedPt(const FixedPt<IntBits, FracBits, T>& x) : value_(x.value_) {}
 
-    explicit FixedPt(int val) : value_(val << FracBits) {}
+    explicit FixedPt(int val) : value_(ShiftLeft<FracBits>(val)) {}
 
-    explicit FixedPt(float val) : value_(T(val * (1 << FracBits))) 
-    {
-    }
+    explicit FixedPt(float val) : value_(T(std::ldexp(val, FracBits))) {}
 
-    explicit FixedPt(double val) : value_(T(val * (1 << FracBits))) 
-    {
-    }
+    explicit FixedPt(double val) : value_(T(std::ldexp(val, FracBits))) {}
 
     template <int IntBits2, int FracBits2>
     FixedPt(const FixedPt<IntBits2, FracBits2, T>& x)
@@ -300,19 +152,30 @@ public:
         return (*this) == FixedPt<IntBits, FracBits, T>(x);
     }
 
+    bool operator !=(FixedPt<IntBits, FracBits, T> x)
+    {
+        return !(*this == x);
+    }
+
+    bool operator !=(int x)
+    {
+        return !(*this == x);
+    }
+
     static const int max_int_value = std::numeric_limits<T>::max() >> FracBits;
     static const int min_int_value = std::numeric_limits<T>::min() >> FracBits;
     static const int int_bits = IntBits;
     static const int frac_bits = FracBits;
 
+    // casting operators
     operator int() const
     {
-        return value_ >> FracBits;
+        return ShiftRight<FracBits>((int)value_);
     }
 
     operator long int() const
     {
-        return value_ >> FracBits;
+        return ShiftRight<FracBits>((long int)value_);
     }
 
     operator float() const
@@ -333,7 +196,7 @@ public:
     //
     void operator +=(int x)
     {
-        value_ += (x<<FracBits);
+        value_ += ShiftLeft<FracBits>(x);
     }
 
     template <typename Tb>
@@ -345,14 +208,7 @@ public:
     template <int Ib, int Fb, typename Tb>
     void operator +=(const FixedPt<Ib,Fb,Tb>& b)
     {
-        if(FracBits > Fb) // we have more fractional bits
-        {
-            value_ += b.value_ << (FracBits-Fb);
-        }
-        else
-        {
-            value_ += b.value_ >> (Fb - FracBits);
-        }
+        value_ += ShiftValue<FracBits, Fb>(b.value_);
     }
 
     //
@@ -372,14 +228,7 @@ public:
     template <int Ib, int Fb, typename Tb>
     void operator -=(const FixedPt<Ib, Fb, Tb>& b)
     {
-        if (FracBits > Fb) // we have more fractional bits
-        {
-            value_ -= b.value_ << (FracBits - Fb);
-        }
-        else
-        {
-            value_ -= b.value_ >> (Fb - FracBits);
-        }
+        value_ -= ShiftValue<FracBits, Fb>(b.value_);
     }
 
     //
@@ -403,7 +252,7 @@ public:
     void operator *=(FixedPt<IntBits2, FracBits2, T2> x)
     {
         long long prod = value_ * x.value_;
-        value_ = prod >> FracBits2;
+        value_ = ShiftRight<FracBits2>(prod);
     }
 
     // operator /=
@@ -412,18 +261,13 @@ public:
         value_ /= s;
     }
 
-//    void operator /=(float s)
-//    {
-//        value_ /= s;
-//    }
-
-
     template <int IntBits2, int FracBits2, typename T2>
     void operator /=(FixedPt<IntBits2, FracBits2, T2> b)
     {
         typedef typename next_bigger_int<T>::type bigger_t;
         bigger_t rVal = (value_ << num_bits<T>::value) / b.value_;
-        value_ = rVal >> (num_bits<T>::value - FracBits2);
+        value_ = ShiftRight<num_bits<T>::value - FracBits2>(rVal);
+        //        value_ = rVal >> (num_bits<T>::value - FracBits2);
     }
 
     /*
@@ -600,25 +444,7 @@ private:
     template <int IntBits2, int FracBits2, typename T2>
     friend class FixedPt;
 
-/*    friend FixedPt<IntBits, FracBits, T> operator + <>(FixedPt<IntBits, FracBits, T> a, int b);
-    friend FixedPt<IntBits, FracBits, T> operator + <>(int a, FixedPt<IntBits, FracBits, T> b);
-    template <int IntBits2, int FracBits2, typename T2>
-    friend FixedPt<IntBits, FracBits, T> operator +(FixedPt<IntBits, FracBits, T> a, FixedPt<IntBits2, FracBits2, T2> b);
-
-    friend FixedPt<IntBits, FracBits, T> operator - <>(FixedPt<IntBits, FracBits, T> a, int b);
-    friend FixedPt<IntBits, FracBits, T> operator - <>(int a, FixedPt<IntBits, FracBits, T> b);
-    template <int IntBits2, int FracBits2, typename T2>
-    friend FixedPt<IntBits, FracBits, T> operator -(FixedPt<IntBits, FracBits, T> a, FixedPt<IntBits2, FracBits2, T2> b);
-
-    friend FixedPt<IntBits, FracBits, T> operator * <>(FixedPt<IntBits, FracBits, T> a, int b);
-    friend FixedPt<IntBits, FracBits, T> operator * <>(int a, FixedPt<IntBits, FracBits, T> b);
-    template <int IntBits2, int FracBits2, typename T2>
-    friend FixedPt<IntBits, FracBits, T> operator *(FixedPt<IntBits, FracBits, T> a, FixedPt<IntBits2, FracBits2, T2> b);
-
-    friend FixedPt<IntBits, FracBits, T> operator / <>(FixedPt<IntBits, FracBits, T> a, int b);
-    template <int IntBits2, int FracBits2, typename T2>
-    friend FixedPt<IntBits, FracBits, T> operator / (FixedPt<IntBits, FracBits, T> a, FixedPt<IntBits2, FracBits2, T2> b);
-    */
+    // Private constructor that takes a raw value
     FixedPt(T val, bool) : value_(val) {}
     T value_;
 };
@@ -725,8 +551,8 @@ FixedPt<IntBits, FracBits, T> operator /(FixedPt<IntBits, FracBits, T> a, FixedP
 
 typedef FixedPt<2, 14> fixed_2_14;
 typedef FixedPt<4, 12> fixed_4_12;
-typedef FixedPt<8, 8> fixed_8_8;
-typedef FixedPt<9, 7> fixed_9_7;
+typedef FixedPt<8, 8>  fixed_8_8;
+typedef FixedPt<9, 7>  fixed_9_7;
 typedef FixedPt<10, 6> fixed_10_6;
 typedef FixedPt<12, 4> fixed_12_4;
 typedef FixedPt<14, 2> fixed_14_2;

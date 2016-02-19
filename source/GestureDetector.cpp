@@ -194,7 +194,6 @@ int GestureDetector::detectGesture()
     if (quietVariance <= tapGateThresh1)
     {
         tapCountdown1 = tapK;
-        prevQuietVariance = quietVariance;
     }
     else if(tapCountdown1 > 0)
     {
