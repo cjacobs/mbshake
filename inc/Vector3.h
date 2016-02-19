@@ -186,7 +186,7 @@ public:
 template<int I, int F, typename T> struct DotType<FixedPt<I, F, T>>
 {
  public:
-    using type = FixedPt<I, F, T>; // TODO: fix this
+    using type = FixedPt<2*I+2, F-I-2, T>; // dot product has to be able to hold 3*x^2, which means 2+2(I) integer bits
 };
 
 typedef Vector3<int8_t> byteVector3;
@@ -195,7 +195,12 @@ typedef Vector3<float> floatVector3;
 template <typename T>
 typename DotType<T>::type dot(const Vector3<T>& a, const Vector3<T>& b)
 {
-    return typename DotType<T>::type(a.x*b.x + a.y*b.y + a.z*b.z);    
+    using dot_t = typename DotType<T>::type;
+    auto xPart = dot_t(a.x) * dot_t(b.x);
+    auto yPart = dot_t(a.y) * dot_t(b.y);
+    auto zPart = dot_t(a.z) * dot_t(b.z);
+    auto result = typename DotType<T>::type(xPart + yPart + zPart);
+    return result;
 }
 
 /*
@@ -249,19 +254,19 @@ float dotNorm(const Vector3<T>& a, const Vector3<T>& b, float minLenThresh)
 }
 
 // dotNorm must be in [-1,1]
-template <int I, int F, typename T>
-FixedPt<I,F,T> dotNormFixed(const Vector3<FixedPt<I,F,T>>& a, const Vector3<FixedPt<I,F,T>>& b)
+template <int IParam, int FParam, typename T>
+FixedPt<2,(IParam+FParam)-2,T> dotNormFixed(const Vector3<FixedPt<IParam,FParam,T>>& a, const Vector3<FixedPt<IParam,FParam,T>>& b)
 {
     // ugh, aLenSq and bLenSq will overflow their datatypes
     auto aLenSq = normSq(a);
     auto bLenSq = normSq(b);
 
-    if (aLenSq == FixedPt<I,F,T>(0) || bLenSq == FixedPt<I,F,T>(0))
+    if (aLenSq == 0 || bLenSq == 0)
     {
-        return FixedPt<I,F,T>(0);
+        return FixedPt<2, (IParam+FParam)-2, T>(0); // TODO: ~0?
     }
 
-    auto denom = aLenSq*bLenSq;
+auto denom = aLenSq*bLenSq; // yikes, we're going to double the # of int bits again
     auto bdota = dot(a,b); // ugh, need dot-product (and multiply) that returns fixed pt thing of correct size
     return bdota * denom.inv_sqrt(); // somehow do this intelligently
 }

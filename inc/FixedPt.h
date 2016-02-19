@@ -21,14 +21,7 @@ namespace
     template <int M1, int M2>
     constexpr int ShiftValue(int x)
     {
-        if(M1 > M2)
-        {
-            return x << (M1-M2);
-        }
-        else
-        {
-            return x >> (M2-M1);
-        }
+        return (M1 > M2) ? (x << (M1 - M2)) : (x >> (M2 - M1));
     }
 
     inline int leading_zeros (uint16_t a)
@@ -259,9 +252,15 @@ namespace
     
 }
 
-// TODO: implement fixed-point square root / inv square root
+// fixed-pt 1/sqrt ideas:
 // http://stackoverflow.com/questions/6286450/inverse-sqrt-for-fixed-point
 // also: http://www.realitypixels.com/turk/computergraphics/FixedSqrt.pdf
+
+// TODO: allow IntBits to be > # bits
+// (and allow negative # frac bits)
+
+
+
 
 template <int IntBits, int FracBits, typename T = typename int_of_size<IntBits+FracBits>::type>
 class FixedPt
@@ -293,7 +292,12 @@ public:
 
     bool operator ==(FixedPt<IntBits, FracBits, T> x)
     {
-    return value_ == x.value_;
+        return value_ == x.value_;
+    }
+
+    bool operator ==(int x)
+    {
+        return (*this) == FixedPt<IntBits, FracBits, T>(x);
     }
 
     static const int max_int_value = std::numeric_limits<T>::max() >> FracBits;
@@ -313,61 +317,124 @@ public:
 
     operator float() const
     {
-        return float(value_) / float(1 << FracBits);
+        return std::ldexp(float(value_), -FracBits);
     }
 
     operator double() const
     {
-        return double(value_) / double(1 << FracBits);
+        return std::ldexp(double(value_), -FracBits);
     }
 
-    // arithmetic ops: +, -, *, / (?)
+    // arithmetic operators of op= form 
+    // ( x op y  operators are defined outside the class)
+
+    //
+    // operator +=
+    //
     void operator +=(int x)
     {
         value_ += (x<<FracBits);
     }
 
-    void operator +=(const FixedPt& x)
+    template <typename Tb>
+    void operator +=(const FixedPt<IntBits,FracBits,Tb>& b)
     {
-        value_ += x.value_;
+        value_ += b.value_;
     }
 
+    template <int Ib, int Fb, typename Tb>
+    void operator +=(const FixedPt<Ib,Fb,Tb>& b)
+    {
+        if(FracBits > Fb) // we have more fractional bits
+        {
+            value_ += b.value_ << (FracBits-Fb);
+        }
+        else
+        {
+            value_ += b.value_ >> (Fb - FracBits);
+        }
+    }
+
+    //
+    // operator -=
+    //
+    void operator -=(int x)
+    {
+        value_ -= (x << FracBits);
+    }
+
+    template <typename Tb>
+    void operator -=(const FixedPt<IntBits, FracBits, Tb>& b)
+    {
+        value_ -= b.value_;
+    }
+
+    template <int Ib, int Fb, typename Tb>
+    void operator -=(const FixedPt<Ib, Fb, Tb>& b)
+    {
+        if (FracBits > Fb) // we have more fractional bits
+        {
+            value_ -= b.value_ << (FracBits - Fb);
+        }
+        else
+        {
+            value_ -= b.value_ >> (Fb - FracBits);
+        }
+    }
+
+    //
+    // unary operator -
+    //
     FixedPt<IntBits, FracBits, T> operator -()
     {
         return FixedPt<IntBits, FracBits, T>(-value_, true);
     }
-    
-    void operator -=(int x)
+
+
+    //
+    // operator *=
+    //
+    void operator *=(int x)
     {
-        value_ -= (x<<FracBits);
+        value_ *= x;
     }
 
-    void operator -=(const FixedPt<IntBits, FracBits, T>& x)
-    {
-        value_ -= x.value_;
-    }
-
-    template <int IntBits2, int FracBits2>
-    void operator *=(const FixedPt<IntBits2, FracBits2, T>& x)
+    template <int IntBits2, int FracBits2, typename T2>
+    void operator *=(FixedPt<IntBits2, FracBits2, T2> x)
     {
         long long prod = value_ * x.value_;
         value_ = prod >> FracBits2;
     }
 
-    /*
-    void operator *=(float s)
-    {
-        value_ *= s;
-    }
-    */
-    
-    void operator /=(float s)
+    // operator /=
+    void operator /=(int s)
     {
         value_ /= s;
     }
 
+//    void operator /=(float s)
+//    {
+//        value_ /= s;
+//    }
 
-    /* // TODO: check this
+
+    template <int IntBits2, int FracBits2, typename T2>
+    void operator /=(FixedPt<IntBits2, FracBits2, T2> b)
+    {
+        typedef typename next_bigger_int<T>::type bigger_t;
+        bigger_t rVal = (value_ << num_bits<T>::value) / b.value_;
+        value_ = rVal >> (num_bits<T>::value - FracBits2);
+    }
+
+    /*
+    template <int IntBits2, int FracBits2, typename T2>
+    void operator /=(const FixedPt<IntBits2, FracBits2, T2>& x)
+    {
+        // TODO: this
+        // I think we want to shift the value with the most int bits to put its first '1' in the MSB
+    }
+    */
+        /* // TODO: check this
     template <int FracBits2>
     void operator /=(const FixedPt<T, FracBits2>& x)
     {
@@ -376,61 +443,6 @@ public:
     }
     */
     
-    // TODO: Nope. need to implement this only for int, float, ...
-    FixedPt<IntBits, FracBits, T> operator +(int b) const
-    {
-        FixedPt<IntBits, FracBits, T> result(*this);
-        result += b;
-        return result;
-    }
-
-    FixedPt<IntBits, FracBits, T> operator +(float b) const
-    {
-        FixedPt<IntBits, FracBits, T> result(*this);
-        result += b;
-        return result;
-    }
-
-    template <int IntBits2, int FracBits2>
-    FixedPt<IntBits, FracBits, T> operator +(FixedPt<IntBits2, FracBits2, T> b) const
-    {
-        FixedPt<IntBits, FracBits, T> result(*this);
-        result += b;
-        return result;
-    }
-
-    template <typename S>
-    FixedPt<IntBits, FracBits, T> operator -(const S& b) const
-    {
-        FixedPt<IntBits, FracBits, T> result(*this);
-        result -= b;
-        return result;
-    }
-
-    FixedPt<IntBits, FracBits, T> operator *(int b) const
-    {
-        FixedPt<IntBits, FracBits, T> result(*this);
-        result *= b;
-        return result;
-    }
-
-    /*
-    FixedPt<T, FracBits> operator *(float b) const
-    {
-        FixedPt<T, FracBits> result(*this);
-        result *= b;
-        return result;
-    }
-    */
-    
-    template <typename S>
-    FixedPt<IntBits, FracBits, T> operator /(const S& b) const
-    {
-        FixedPt<IntBits, FracBits, T> result(*this);
-        result /= b;
-        return result;
-    }
-
     FixedPt<IntBits, FracBits, T> sqrtx()
     {
         // adapted from http://www.realitypixels.com/turk/computergraphics/FixedSqrt.pdf
@@ -458,7 +470,6 @@ public:
     {
         static const T lookupTable[16] = { 0, 1 << FracBits, sqrtVal<T,FracBits>(2), sqrtVal<T,FracBits>(3), sqrtVal<T,FracBits>(4), sqrtVal<T,FracBits>(5), sqrtVal<T,FracBits>(6), sqrtVal<T,FracBits>(7),
             sqrtVal<T,FracBits>(8), sqrtVal<T,FracBits>(9), sqrtVal<T,FracBits>(10), sqrtVal<T,FracBits>(11), sqrtVal<T,FracBits>(12), sqrtVal<T,FracBits>(13), sqrtVal<T,FracBits>(14), sqrtVal<T,FracBits>(15) };
-
 
         // First try integer part
         unsigned int mask = 0b01111;
@@ -589,23 +600,134 @@ private:
     template <int IntBits2, int FracBits2, typename T2>
     friend class FixedPt;
 
+/*    friend FixedPt<IntBits, FracBits, T> operator + <>(FixedPt<IntBits, FracBits, T> a, int b);
+    friend FixedPt<IntBits, FracBits, T> operator + <>(int a, FixedPt<IntBits, FracBits, T> b);
+    template <int IntBits2, int FracBits2, typename T2>
+    friend FixedPt<IntBits, FracBits, T> operator +(FixedPt<IntBits, FracBits, T> a, FixedPt<IntBits2, FracBits2, T2> b);
+
+    friend FixedPt<IntBits, FracBits, T> operator - <>(FixedPt<IntBits, FracBits, T> a, int b);
+    friend FixedPt<IntBits, FracBits, T> operator - <>(int a, FixedPt<IntBits, FracBits, T> b);
+    template <int IntBits2, int FracBits2, typename T2>
+    friend FixedPt<IntBits, FracBits, T> operator -(FixedPt<IntBits, FracBits, T> a, FixedPt<IntBits2, FracBits2, T2> b);
+
+    friend FixedPt<IntBits, FracBits, T> operator * <>(FixedPt<IntBits, FracBits, T> a, int b);
+    friend FixedPt<IntBits, FracBits, T> operator * <>(int a, FixedPt<IntBits, FracBits, T> b);
+    template <int IntBits2, int FracBits2, typename T2>
+    friend FixedPt<IntBits, FracBits, T> operator *(FixedPt<IntBits, FracBits, T> a, FixedPt<IntBits2, FracBits2, T2> b);
+
+    friend FixedPt<IntBits, FracBits, T> operator / <>(FixedPt<IntBits, FracBits, T> a, int b);
+    template <int IntBits2, int FracBits2, typename T2>
+    friend FixedPt<IntBits, FracBits, T> operator / (FixedPt<IntBits, FracBits, T> a, FixedPt<IntBits2, FracBits2, T2> b);
+    */
     FixedPt(T val, bool) : value_(val) {}
     T value_;
 };
 
-    template <int IntBits, int FracBits, typename T, typename S>
-    FixedPt<IntBits, FracBits, T> operator *(const S& a, FixedPt<IntBits, FracBits, T> b)
-    {
-        FixedPt<IntBits, FracBits, T> result(b);
-    result *= a;
-    return result;
+//
+// operator +
+//
+template <int IntBits, int FracBits, typename T>
+FixedPt<IntBits, FracBits, T> operator +(FixedPt<IntBits, FracBits, T> a, int b)
+{
+    FixedPt<IntBits, FracBits, T> x = a;
+    x += b;
+    return x;
 }
 
-    typedef FixedPt<2, 14> fixed_2_14;
-    typedef FixedPt<4, 12> fixed_4_12;
-    typedef FixedPt<8, 8> fixed_8_8;
-    typedef FixedPt<9, 7> fixed_9_7;
-    typedef FixedPt<10, 6> fixed_10_6;
+template <int IntBits, int FracBits, typename T>
+FixedPt<IntBits, FracBits, T> operator +(int a, FixedPt<IntBits, FracBits, T> b)
+{
+    FixedPt<IntBits, FracBits, T> x = b;
+    x += a;
+    return x;
+}
+
+template <int IntBits, int FracBits, typename T, int IntBits2, int FracBits2, typename T2>
+FixedPt<IntBits, FracBits, T> operator +(FixedPt<IntBits, FracBits, T> a, FixedPt<IntBits2, FracBits2, T2> b)
+{
+    FixedPt<IntBits, FracBits, T> x = a;
+    x += b;
+    return x;
+}
+
+//
+// operator -
+//
+template <int IntBits, int FracBits, typename T>
+FixedPt<IntBits, FracBits, T> operator -(FixedPt<IntBits, FracBits, T> a, int b)
+{
+    FixedPt<IntBits, FracBits, T> x = a;
+    x -= b;
+    return x;
+}
+
+template <int IntBits, int FracBits, typename T>
+FixedPt<IntBits, FracBits, T> operator -(int a, FixedPt<IntBits, FracBits, T> b)
+{
+    FixedPt<IntBits, FracBits, T> x = b;
+    x -= a;
+    return x;
+}
+
+template <int IntBits, int FracBits, typename T, int IntBits2, int FracBits2, typename T2>
+FixedPt<IntBits, FracBits, T> operator -(FixedPt<IntBits, FracBits, T> a, FixedPt<IntBits2, FracBits2, T2> b)
+{
+    FixedPt<IntBits, FracBits, T> x = a;
+    x -= b;
+    return x;
+}
+
+//
+// operator *
+//
+template <int IntBits, int FracBits, typename T>
+FixedPt<IntBits, FracBits, T> operator *(FixedPt<IntBits, FracBits, T> a, int b)
+{
+    FixedPt<IntBits, FracBits, T> x = a;
+    x *= b;
+    return x;
+}
+
+template <int IntBits, int FracBits, typename T>
+FixedPt<IntBits, FracBits, T> operator *(int a, FixedPt<IntBits, FracBits, T> b)
+{
+    FixedPt<IntBits, FracBits, T> x = b;
+    x *= a;
+    return x;
+}
+
+template <int IntBits, int FracBits, typename T, int IntBits2, int FracBits2, typename T2>
+FixedPt<IntBits, FracBits, T> operator *(FixedPt<IntBits, FracBits, T> a, FixedPt<IntBits2, FracBits2, T2> b)
+{
+    FixedPt<IntBits, FracBits, T> x = a;
+    x *= b;
+    return x;
+}
+
+//
+// operator /
+//
+template <int IntBits, int FracBits, typename T>
+FixedPt<IntBits, FracBits, T> operator /(FixedPt<IntBits, FracBits, T> a, int b)
+{
+    FixedPt<IntBits, FracBits, T> x = a;
+    x /= b;
+    return x;
+}
+
+template <int IntBits, int FracBits, typename T, int IntBits2, int FracBits2, typename T2>
+FixedPt<IntBits, FracBits, T> operator /(FixedPt<IntBits, FracBits, T> a, FixedPt<IntBits2, FracBits2, T2> b)
+{
+    FixedPt<IntBits, FracBits, T> x = a;
+    x /= b;
+    return x;
+}
+
+typedef FixedPt<2, 14> fixed_2_14;
+typedef FixedPt<4, 12> fixed_4_12;
+typedef FixedPt<8, 8> fixed_8_8;
+typedef FixedPt<9, 7> fixed_9_7;
+typedef FixedPt<10, 6> fixed_10_6;
 typedef FixedPt<12, 4> fixed_12_4;
 typedef FixedPt<14, 2> fixed_14_2;
 typedef FixedPt<16, 0> fixed_16_0;

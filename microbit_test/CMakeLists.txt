@@ -36,6 +36,7 @@ set (SRC ../source/GestureDetector.cpp
 set (INCLUDE ../inc/DelayBuffer.h
              ../inc/EventThresholdFilter.h
              ../inc/FastMath.h
+			 ../inc/FixedPt.h
 			 ../inc/GestureDetector.h
              ../inc/IirFilter.h
 			 ../inc/MicroBitAccess.h

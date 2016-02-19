@@ -14,8 +14,7 @@ using std::max;
 
 const int sampleRate = 18; // in ms
 
-const float lowpassFilterCoeff = 0.875f;
-const float gravityFilterCoeff = 1/32.0;
+const filterCoeff_t gravityFilterCoeff = filterCoeff_t(1/32.0);
 
 const float minLenThresh = 1; 
 
@@ -45,7 +44,7 @@ const float tapGateThresh1 = 25.0f; // variance of preceeding windown should be 
 // [0,0,0,0,0... ~12, ...]  Maybe check if var over an even bigger
 // window is exactly(ish) 0, and lower the threshold even more if so?
 
-GestureDetector::GestureDetector() : gravityFilter(filterCoeff_t(gravityFilterCoeff)),
+GestureDetector::GestureDetector() : gravityFilter(gravityFilterCoeff),
                                      tapLargeWindowStats(sampleDelayBuffer),
                                      tapImpulseWindowStats(sampleDelayBuffer),
                                      shakeThreshStats(sampleDelayBuffer),
@@ -68,7 +67,6 @@ void GestureDetector::init()
     gravity = initFilterSample;
     filteredSample = initFilterSample;
     gravityFilter.init(initFilterSample);
-    // lowpassFilter.init(initFilterSample);
 }
 
 byteVector3 quantizeSample(const byteVector3& b, int factor)
