@@ -1,3 +1,10 @@
+int getRectArea(int w, int h)
+{
+    return w*h;
+}
+
+#if 0
+
 #include "Vector3.h"
 #include "DelayBuffer.h"
 #include "RunningStats.h"
@@ -38,11 +45,6 @@ const float tapScaleDenominator = 2.5f;
 const float tapGateThresh1 = 25.0f; // variance of preceeding windown should be less than this
 
 
-
-int getRectArea(int w, int h)
-{
-    return w*h;
-}
 
 // TODO:
 // * Maybe modulate the shake output slightly by the amount of energy? --- soft shakes
@@ -278,3 +280,4 @@ int MicroBitGestureDetector::getCurrentGesture()
 {
     return state;
 }
+#endif

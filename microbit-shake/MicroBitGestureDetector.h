@@ -1,3 +1,8 @@
+int getRectArea(int w, int h);
+
+#if 0
+
+
 #pragma once
 
 #include "DelayBuffer.h"
@@ -21,7 +26,6 @@ using predictionValue_t = float;
 // using filterCoeff_t = float;
 using filterCoeff_t = fixed_2_14;
 
-int getRectArea(int w, int h);
 
 enum MicroBitAccelerometerEvents
     {
@@ -122,3 +126,4 @@ private:
     byteVector3 lastFilteredSample;
 };
 
+#endif
