@@ -9,6 +9,10 @@
 
 #include <cmath>
 #include <cstdlib>
+
+#define QUANTIZE_SAMPLE 0
+
+
 using std::abs;
 using std::max;
 
@@ -47,7 +51,7 @@ const float tapGateThresh1 = 25.0f; // variance of preceeding windown should be 
 // [0,0,0,0,0... ~12, ...]  Maybe check if var over an even bigger
 // window is exactly(ish) 0, and lower the threshold even more if so?
 
-GestureDetector::GestureDetector() : gravityFilter(gravityFilterCoeff),
+MicroBitGestureDetector::MicroBitGestureDetector() : gravityFilter(gravityFilterCoeff),
                                      tapLargeWindowStats(sampleDelayBuffer),
                                      tapImpulseWindowStats(sampleDelayBuffer),
 #if USE_SHAKE_GATE
@@ -60,10 +64,10 @@ GestureDetector::GestureDetector() : gravityFilter(gravityFilterCoeff),
     shakeEventFilter(shakeGestureThreshold, shakeEventCountThreshold, shakeEventCountLowThreshold),
     tapEventFilter(tapGestureThreshold, tapEventCountThreshold, 0)
 {
-    // init() // ?
+    init(); // ?
 }
 
-void GestureDetector::init()
+void MicroBitGestureDetector::init()
 {
     // init gravity
     updateAccelerometer();
@@ -74,26 +78,30 @@ void GestureDetector::init()
     gravityFilter.init(initFilterSample);
 }
 
+#if QUANTIZE_SAMPLE
 byteVector3 quantizeSample(const byteVector3& b, int factor)
 {
     // TODO: round appropriately, be more efficient
     return byteVector3(b / float(factor))*factor;
 }
+#endif
 
 // For some reason, this kills the micro:bit for a while
 template<typename MeanDelayType, typename MeanStatsType>
-void GestureDetector::processDotFeature(const byteVector3& currentSample, int dotWavelength, MeanDelayType& meanDelay, MeanStatsType& delayDotStats)
+void MicroBitGestureDetector::processDotFeature(const byteVector3& currentSample, int dotWavelength, MeanDelayType& meanDelay, MeanStatsType& delayDotStats)
 {
+#if QUANTIZE_SAMPLE    
     // TODO: investigate if this really helps like it appears to do in the python version
     int quantRate = 16;
-
-    // omigosh... in the python code, we were severely clipping the data
     byteVector3 quantizedCurrentSample = quantizeSample(currentSample, quantRate);
-
-    // TODO: implement fixed-pt versions of dotNorm
 
     float dot1a = dotNorm(quantizedCurrentSample, quantizeSample(sampleDelayBuffer.getDelayedSample(dotWavelength), quantRate), minLenThresh);
     float dot1b = dotNorm(quantizedCurrentSample, quantizeSample(sampleDelayBuffer.getDelayedSample(2 * dotWavelength), quantRate), minLenThresh);
+#else
+    // TODO: implement fixed-pt versions of dotNorm
+    float dot1a = dotNorm(currentSample, sampleDelayBuffer.getDelayedSample(dotWavelength), minLenThresh);
+    float dot1b = dotNorm(currentSample, sampleDelayBuffer.getDelayedSample(2 * dotWavelength), minLenThresh);
+#endif
 
     if (dot1a < 0 && dot1b > 0)
     {
@@ -107,7 +115,7 @@ void GestureDetector::processDotFeature(const byteVector3& currentSample, int do
     }
 }
 
-void GestureDetector::processSample(byteVector3 sample)
+void MicroBitGestureDetector::processSample(byteVector3 sample)
 {
     lastRawSample = sample;
     gravity = gravityFilter.filterSample(filteredSample_t(sample));
@@ -134,7 +142,7 @@ void GestureDetector::processSample(byteVector3 sample)
     }
 }
 
-predictionValue_t GestureDetector::getShakePrediction()
+predictionValue_t MicroBitGestureDetector::getShakePrediction()
 {    
     if(allowSlowGesture)
     {
@@ -146,7 +154,7 @@ predictionValue_t GestureDetector::getShakePrediction()
     }
 }
 
-predictionValue_t GestureDetector::getTapPrediction()
+predictionValue_t MicroBitGestureDetector::getTapPrediction()
 {
     // If previous quiet window was very very quiet (e.g., 0), then
     // increase output (when micro:bit is sitting on table, tap
@@ -156,12 +164,12 @@ predictionValue_t GestureDetector::getTapPrediction()
     return tapImpulseWindowStats.getVar() * scale;
 }
 
-void GestureDetector::togglePrinting()
+void MicroBitGestureDetector::togglePrinting()
 {
     isPrinting = !isPrinting;
 }
 
-void GestureDetector::toggleAlg()
+void MicroBitGestureDetector::toggleAlg()
 {
     allowSlowGesture = !allowSlowGesture;
     if(allowSlowGesture)
@@ -174,7 +182,7 @@ void GestureDetector::toggleAlg()
     }
 }
 
-void GestureDetector::systemTick()
+void MicroBitGestureDetector::systemTick()
 {
     unsigned long time = systemTime();
 
@@ -186,7 +194,7 @@ void GestureDetector::systemTick()
     }
 }
 
-int GestureDetector::detectGesture()
+int MicroBitGestureDetector::detectGesture()
 {
     updateAccelerometer();
     byteVector3 sample = getAccelData();
@@ -261,7 +269,7 @@ int GestureDetector::detectGesture()
     return 0; // none
 }
 
-int GestureDetector::getCurrentGesture()
+int MicroBitGestureDetector::getCurrentGesture()
 {
     return state;
 }

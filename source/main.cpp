@@ -140,7 +140,7 @@ MicroBit& GetMicrobit()
 //
 // Local code
 //
-GestureDetector detector;
+MicroBitGestureDetector detector;
 void accelerometer_poll()
 {
     // try scheduling the component thing here

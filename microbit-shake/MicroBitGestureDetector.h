@@ -28,10 +28,10 @@ enum MicroBitAccelerometerEvents
         MICROBIT_ACCELEROMETER_TAP = 101,
     };
 
-class GestureDetector
+class MicroBitGestureDetector
 {
 public:
-    GestureDetector();
+    MicroBitGestureDetector();
     void init();
 
     void systemTick();
