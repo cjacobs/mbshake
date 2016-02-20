@@ -7,7 +7,6 @@
 #include "IirFilter.h"
 #include "FixedPt.h"
 
-
 // #defines for optional parts
 #define USE_SHAKE_GATE 1
 
@@ -21,6 +20,13 @@ using predictionValue_t = float;
 
 // using filterCoeff_t = float;
 using filterCoeff_t = fixed_2_14;
+
+
+inline int32_t squareArea(int32_t w)
+{
+    return w*w;
+}
+
 
 enum MicroBitAccelerometerEvents
     {
