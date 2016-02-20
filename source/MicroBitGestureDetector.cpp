@@ -39,6 +39,14 @@ const float tapGateThresh1 = 25.0f; // variance of preceeding windown should be 
 
 
 
+int getRectArea(int w, int h)
+{
+    return w*h;
+}
+
+
+
+
 // TODO:
 // * Maybe modulate the shake output slightly by the amount of energy? --- soft shakes
 //     return a very large prediction value --- often higher than a strong shake

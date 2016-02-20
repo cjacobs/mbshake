@@ -21,12 +21,7 @@ using predictionValue_t = float;
 // using filterCoeff_t = float;
 using filterCoeff_t = fixed_2_14;
 
-
-inline int32_t squareArea(int32_t w)
-{
-    return w*w;
-}
-
+int getRectArea(int w, int h);
 
 enum MicroBitAccelerometerEvents
     {
