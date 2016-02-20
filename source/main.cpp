@@ -1,3 +1,4 @@
+#if 0
 #include "Vector3.h"
 #include "FastMath.h"
 #include "MicroBitGestureDetector.h"
@@ -210,3 +211,4 @@ void app_main()
     uBit.MessageBus.listen(MICROBIT_ID_BUTTON_A, MICROBIT_BUTTON_EVT_CLICK, onButtonA);
     uBit.MessageBus.listen(MICROBIT_ID_BUTTON_B, MICROBIT_BUTTON_EVT_CLICK, onButtonB);
 }
+#endif
