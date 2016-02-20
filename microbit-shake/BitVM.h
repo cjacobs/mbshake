@@ -1,3 +1,5 @@
+#if 0
+
 #ifndef __BITVM_H
 #define __BITVM_H
 
@@ -379,3 +381,6 @@ namespace bitvm {
 #endif
 
 // vim: ts=2 sw=2 expandtab
+
+
+#endif
