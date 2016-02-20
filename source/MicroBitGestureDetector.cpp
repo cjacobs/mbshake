@@ -44,9 +44,6 @@ int getRectArea(int w, int h)
     return w*h;
 }
 
-ldsjfasdflkj
-
-
 // TODO:
 // * Maybe modulate the shake output slightly by the amount of energy? --- soft shakes
 //     return a very large prediction value --- often higher than a strong shake
