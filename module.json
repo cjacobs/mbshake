@@ -19,6 +19,5 @@
     "microbit-dal": "lancaster-university/microbit-dal#td3"
   },
   "targetDependencies": { },
-  "bin": "./source",
   "extraIncludes": [ "microbit-shake", "inc" ]
 }
