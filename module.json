@@ -16,7 +16,8 @@
     }
   ],
   "dependencies": {
-    "microbit-dal": "lancaster-university/microbit-dal#td3"
+    "microbit-dal": "lancaster-university/microbit-dal#v1.4.15",
+      "yotta-test": "cjacobs/yotta_test#test2"
   },
   "targetDependencies": { },
   "extraIncludes": [ "microbit-shake", "inc" ]
