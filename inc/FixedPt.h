@@ -335,12 +335,15 @@ public:
 
         constexpr int nBits = num_bits<T>::value;
         typedef typename std::make_unsigned<T>::type uT;
-        typedef typename next_bigger_int<T>::type bigger_t;
+        typedef typename next_bigger_int<T>::type bigT;
+        typedef typename next_bigger_int<uT>::type uBigT;
 
         uT val = static_cast<uT>(value_);
         int scale = leading_zeros(val) & (~0x01); // round scale down to be even
         val = val << scale; // val now in 2.X fixed format, in [1,3)  (so, top 2 bits are 01, 10, or 11 (but not 00)
-        float valFloat = float(val) / float(1<<(nBits-2));
+
+        float valFloat = float(val) / float(1 << (nBits - (IntBits-scale)));
+        float thisFloat = float(*this);
 
         // Lookup table thing
         const int tableIndex = (val>>(nBits-4)) - 4;
@@ -361,11 +364,11 @@ public:
         uT threeY = lookupVal << cBits;
         
         // check this:
-        uint32_t y = (threeY - (((bigger_t)yCubed*val)>>nBits)); // y is 3y/2 + xy^3/2 ---  in 1.X fixed format 
-        uint32_t s = ((bigger_t)y*val) >> nBits; // s = y*x in 3.X fixed 
-        const uint32_t three = 0x03 << (nBits-4); // 3 in 4.X fixed, == 3/2 in 3.X fixed
-        s = three - (((bigger_t)y*s)>>nBits); // s now = 3 - y^2*x in 4.X fixed
-        y = ((bigger_t)y*s) >> nBits; // now y = y(3-y^2*x) in 5.X fixed == (3/2)y - y^2*x/2 in 4.X fixed
+        bigT y = (threeY - (((bigT)yCubed*val)>>nBits)); // y is 3y/2 + xy^3/2 ---  in 1.X fixed format 
+        bigT s = ((bigT)y*val) >> nBits; // s = y*x in 3.X fixed 
+        const uBigT three = 0x03 << (nBits-4); // 3 in 4.X fixed, == 3/2 in 3.X fixed
+        s = three - (((bigT)y*s)>>nBits); // s now = 3 - y^2*x in 4.X fixed
+        y = ((bigT)y*s) >> nBits; // now y = y(3-y^2*x) in 5.X fixed == (3/2)y - y^2*x/2 in 4.X fixed
 
         // now y is sqrt of our normalized value n 4.X format
         // first convert to sqrt of input
@@ -374,7 +377,6 @@ public:
         // now convert to z.X fixed (where z = total_bits-FracBits)
         // y2 is in 4.X... 
 
-        constexpr int intBits = (nBits-FracBits);
         constexpr int M_2 = FracBits >> 1;
 
         // This only works when nBits == 16 --- TODO: fix for general # bits
@@ -382,13 +384,13 @@ public:
         
         if(nBits == 16)
         {
-            constexpr int shift = intBits-M_2+3;
+            constexpr int shift = IntBits-M_2+3;
             Z = shift-(scale >> 1); 
         }
         else if(nBits == 32)
         {
             // here are values for nBits == 32
-            constexpr int shift = intBits-M_2+8+3; // // works for 1, 2 (when scale == O
+            constexpr int shift = IntBits-M_2+8+3; // // works for 1, 2 (when scale == O
             Z = shift-(scale >> 1); 
         }
 

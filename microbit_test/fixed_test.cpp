@@ -107,9 +107,15 @@ TEST_CASE("fixed_pt")
     }
 
     // recip sqrt test
-    for (float x : { 1.0f, 2.0f, 0.125f, 0.25f, 0.5f, 1.111f, 2.0f, 3.0f, 4.0f, 5.0f, 6.0f, 7.0f, 8.0f, 16.0f, 32.0f, 64.0f, 15.0f })
+    for (float x : { 0.076f, 1.0f, 2.0f, 0.125f, 0.25f, 0.5f, 1.111f, 2.0f, 3.0f, 4.0f, 5.0f, 6.0f, 7.0f, 8.0f, 16.0f, 32.0f, 64.0f, 15.0f, 196.0f })
     {
         float y = 1.0 / sqrtf(x);
+
+        if (x < fixed_4_12::max_int_value)
+        {
+            fixed_4_12 y4_12(x);
+            REQUIRE(float(y4_12.inv_sqrt()) == Approx(y).epsilon(0.1));
+        }
 
         fixed_8_8 y16_8 = fixed_8_8(x);
         REQUIRE(float(y16_8.inv_sqrt()) == Approx(y).epsilon(0.1));

@@ -60,5 +60,7 @@ TEST_CASE("fixed_point dot norm")
         float dotNormFixedTemp = float(dotNormFixedVal);
         cout << "Calculating dotNorm(v,v) for vec " << floatVec << "  = " << dotNormVal << " --> " << dotNormFixedTemp << endl;
         REQUIRE(dotNormVal == Approx(float(dotNormFixedVal)).epsilon(0.3));
+        cout << endl;
     }    
 }
+ 
