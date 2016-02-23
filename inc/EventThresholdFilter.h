@@ -30,6 +30,11 @@ public:
         return count_ >= eventCountThreshold_;
     }
 
+    bool currentValue()
+    {
+        return count_ >= eventCountThreshold_;
+    }
+
     void reset()
     {
         count_ = 0;

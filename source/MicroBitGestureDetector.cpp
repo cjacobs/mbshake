@@ -7,14 +7,9 @@
 #include "FixedPt.h"
 #include "MicroBitGestureDetector.h"
 
-#include <cmath>
-#include <cstdlib>
+#include <algorithm> // for std::max
 
 #define QUANTIZE_SAMPLE 0
-
-
-using std::abs;
-using std::max;
 
 const int sampleRate = 18; // in ms
 
@@ -146,7 +141,7 @@ predictionValue_t MicroBitGestureDetector::getShakePrediction()
 {    
     if(allowSlowGesture)
     {
-        return max(dot2Stats.getMean(), dot4Stats.getMean());
+        return std::max(dot2Stats.getMean(), dot4Stats.getMean());
     }
     else
     {
@@ -224,7 +219,6 @@ int MicroBitGestureDetector::detectGesture()
     float diagnosticVal = 0;
     if(isPrinting) diagnosticVal = getShakePrediction();
 
-    //    auto& printedSample = lastRawSample;
     auto& outputSample = lastFilteredSample;
 
     if(shouldCheckTap)
@@ -272,4 +266,9 @@ int MicroBitGestureDetector::detectGesture()
 int MicroBitGestureDetector::getCurrentGesture()
 {
     return state;
+}
+
+bool MicroBitGestureDetector::isShaking()
+{
+    return shakeEventFilter.currentValue();
 }

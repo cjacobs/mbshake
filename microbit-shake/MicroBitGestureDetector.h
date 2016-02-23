@@ -36,6 +36,7 @@ public:
 
     void systemTick();
     int getCurrentGesture();
+    bool isShaking();
 
     void togglePrinting();
     void toggleAlg();

@@ -7,11 +7,6 @@
 #include <limits>
 #include <type_traits>
 
-//#include <iostream>
-//using std::cout;
-//using std::endl;
-//#include <iomanip>
-
 namespace
 {
     template <typename T, int Mbits>
@@ -37,20 +32,6 @@ namespace
             hiPart = ~0;
         }
         
-        return (hiPart << x3Bits) | loPart;
-    }
-
-    template <typename T>
-    T gen_entry2(double x, int cubedBits, int x3Bits)
-    {
-        double y = sqrt(x);
-        T loPart = fixed_cast<T>(3*y, x3Bits-2);
-        T hiPart = fixed_cast<T> (y*y*y, cubedBits);
-
-        if(x == 1.0)
-        {
-            hiPart = ~0;
-        }
         return (hiPart << x3Bits) | loPart;
     }
 
@@ -108,15 +89,9 @@ namespace
     
 }
 
-// fixed-pt 1/sqrt ideas:
-// http://stackoverflow.com/questions/6286450/inverse-sqrt-for-fixed-point
-// also: http://www.realitypixels.com/turk/computergraphics/FixedSqrt.pdf
-
 // TODO: allow IntBits to be > # bits
 // (and allow negative # frac bits)
-
-
-
+template <typename T> class Vector3;
 
 template <int IntBits, int FracBits, typename T = typename int_of_size<IntBits+FracBits>::type>
 class FixedPt
@@ -251,7 +226,8 @@ public:
     template <int IntBits2, int FracBits2, typename T2>
     void operator *=(FixedPt<IntBits2, FracBits2, T2> x)
     {
-        long long prod = value_ * x.value_;
+        using bigT = typename next_bigger_int<T>::type;
+        bigT prod = value_ * x.value_;
         value_ = ShiftRight<FracBits2>(prod);
     }
 
@@ -423,24 +399,24 @@ public:
         return result;
     }
 
-    /*
-      // 
-void printTable()
-{
-cout << "uint16_t inv_sqrt_table[] = // 12-entry version" << endl;
-cout << \t{" << endl;
+#if 0
+    void printLookupTable()
+    {
+        cout << "uint16_t inv_sqrt_table[] = // 12-entry version" << endl;
+        cout << "\t{" << endl;
+        
+        int numEntries = sizeof(inv_sqrt_table)/sizeof(inv_sqrt_table[0]);
+        for(int index = 0; index < numEntries); index++)
+        {
+            char delim = (index == numEntries-1) ? ' ' : ',';
+            cout << "\t0x" << std::hex << inv_sqrt_table[index] << delim << endl;
+        }
+        cout << "\t};" << endl;
+    }
+#endif
 
-int numEntries = sizeof(inv_sqrt_table)/sizeof(inv_sqrt_table[0];
-for(int index = 0; index < numEntries); index++)
- {
-      char delim = (index == numEntries-1) ? ' ' : ',';
-     cout << "\t0x" << std::hex << inv_sqrt_table[index] << delim << endl;
- }
- cout << "\t};" << endl;
-}
-    */
 
-private:
+// private:
     template <int IntBits2, int FracBits2, typename T2>
     friend class FixedPt;
 

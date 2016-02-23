@@ -21,7 +21,7 @@ if(CMAKE_COMPILER_IS_GNUCC OR CMAKE_COMPILER_IS_GNUCXX OR CMAKE_CXX_COMPILER_ID 
   add_compile_options(-std=c++1y)
 endif()
 
-set (SRC ../source/GestureDetector.cpp
+set (SRC ../source/MicroBitGestureDetector.cpp
          main_stub.cpp
          delayBuffer_test.cpp
          fastmath_test.cpp
@@ -33,12 +33,12 @@ set (SRC ../source/GestureDetector.cpp
          vector3_test.cpp
          ${PROJ_NAME}.cpp)
 
-set (INCLUDE ../inc/BitUtil.h
+set (INCLUDE ../microbit-shake/MicroBitGestureDetector.h
+             ../inc/BitUtil.h
              ../inc/DelayBuffer.h
              ../inc/EventThresholdFilter.h
              ../inc/FastMath.h
 			 ../inc/FixedPt.h
-			 ../inc/GestureDetector.h
              ../inc/IirFilter.h
 			 ../inc/MicroBitAccess.h
              ../inc/RingBuffer.h
@@ -49,7 +49,7 @@ set (INCLUDE ../inc/BitUtil.h
 source_group("src" FILES ${SRC})
 source_group("include" FILES ${INCLUDE})
 
-include_directories(../inc)
+include_directories(../inc ../microbit-shake)
 
 # create executable
 add_executable(${PROJ_NAME} ${SRC} ${INCLUDE})

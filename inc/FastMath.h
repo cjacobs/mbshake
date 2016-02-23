@@ -2,7 +2,6 @@
 
 #include <cstdint> // for int8_t, int32_t types
 #include <cmath>
-//using std::sqrtf;
 
 template <typename T>
 int8_t clampByte(const T& inVal)

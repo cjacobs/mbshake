@@ -5,13 +5,25 @@
 template <int Amount, typename T>
 constexpr T ShiftLeft(T x)
 {
-    return (Amount >= 0) ? (x << Amount) : (x >> -Amount);
+    return (Amount >= 0) ? (x << Amount) : (x >> (-Amount));
+}
+
+template <typename T>
+T ShiftLeft(T x, int amount)
+{
+    return (amount >= 0) ? (x << amount) : (x >> (-amount));
 }
 
 template <int Amount, typename T>
 constexpr T ShiftRight(T x)
 {
-    return (Amount >= 0) ? (x >> Amount) : (x << -Amount);
+    return (Amount >= 0) ? (x >> Amount) : (x << (-Amount));
+}
+
+template <typename T>
+T ShiftRight(T x, int amount)
+{
+    return (amount >= 0) ? (x >> amount) : (x << (-amount));
 }
 
 template <int M1, int M2>
