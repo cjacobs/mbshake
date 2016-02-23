@@ -309,7 +309,6 @@ public:
         {
             // shift left to fall on multiple of 4
             T tmp = value_;
-            int outShift = 0;
             int shift = (4-1) - ((FracBits-1)%4);
             tmp <<= shift;
             int numBlocks = (FracBits+shift)/4;

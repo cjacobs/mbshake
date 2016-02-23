@@ -4,6 +4,14 @@
 
 #include <type_traits>
 
+
+#include <iostream>
+using namespace std;
+
+
+
+
+
 template <typename T>
 class Vector3
 {
@@ -331,18 +339,21 @@ FixedPt<2, (I+F)-2, T> dotNormFixed(const Vector3<FixedPt<I,F,T>>& a, const Vect
     int bLenSqScale = leading_zeros(bLenSq) & (~0x01);
     int aDotBScale = leading_zeros((uBigT)aDotB) & (~0x01);
 
-    uBigT aDotBBig= ShiftLeft(aDotB, aDotBScale); // aDotBBig is a bigT type with (20-scale) integer bits. "Real" value = (aDotBBig >> bits(uBigT)) << (20-scale)
+    uBigT aDotBBig = ShiftLeft(aDotB, aDotBScale); // aDotBBig is a bigT type with (20-scale) integer bits. "Real" value = (aDotBBig >> bits(uBigT)) << (20-scale)
 
     uT aLenSqTrunc = ShiftLeft(aLenSq, aLenSqScale - num_bits<T>::value); // aLenSqTrunc is a uT type with (20-scale) integer bits
     uT bLenSqTrunc = ShiftLeft(bLenSq, bLenSqScale - num_bits<T>::value); // "Real" value = (aLenSqTrunc >> bits(uT)) << (20-scale)
 
-    uT denomSq = (uBigT(aLenSq)*bLenSq) >> (num_bits<T>::value); // "Real" denomSq = (denomSq>>bits(uT)) << (40-scaleA-scaleB)
+    uT denomSq = (uBigT(aLenSqTrunc) * uBigT(bLenSqTrunc)) >> (num_bits<T>::value); // "Real" denomSq = (denomSq>>bits(uT)) << (40-scaleA-scaleB)
     FixedPt<0, I + F, uT> denomSqFixed(denomSq, true); // cast it to a fixed-pt denormalized value
     FixedPt<2, I + F - 2, uT> denom = denomSqFixed.inv_sqrt(); // "Real" value is ((denom.value_)>>bits(T)-2) << -((40-scaleA-scaleB)/2)
     float sqrtVal = float(denom);
 
+    cout << "sqrtVal: " << sqrtVal << endl;
+    
+    
     uBigT quotient = (aDotBBig / denom.value_); // == aDotBBig*2^(20-scale-bits(bigT)) / denom*2^(bits(T)-2+((40-scaleA-scaleB)/2))
-    int leftShift = (20 - aDotBScale - num_bits<T>::value) - (((40 - aLenSqScale - bLenSqScale) / 2) + 2 + num_bits<uBigT>::value);
+//    int leftShift = (20 - aDotBScale - num_bits<T>::value) - (((40 - aLenSqScale - bLenSqScale) / 2) + 2 + num_bits<uBigT>::value);
     quotient >>= num_bits<T>::value;
     int resultShift = (aLenSqScale + bLenSqScale) / 2 - aDotBScale;
     FixedPt<2, I + F - 2, T> result(ShiftRight(quotient, resultShift-8), true);

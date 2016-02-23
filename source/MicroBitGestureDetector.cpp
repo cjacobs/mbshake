@@ -29,7 +29,7 @@ const float shakeGateThreshSquared = 40000; //4000000.0f;
 const float tapGestureThreshold = 200.0f; // TODO: this can be an int
 const int tapEventCountThreshold = 1;
 
-const float tapScaleDenominator = 2.5f;
+//const float tapScaleDenominator = 2.5f;
 const float tapGateThresh1 = 25.0f; // variance of preceeding windown should be less than this
 
 
