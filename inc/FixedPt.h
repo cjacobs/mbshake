@@ -378,7 +378,7 @@ public:
         constexpr int intBits = (nBits-FracBits);
         constexpr int M_2 = FracBits >> 1;
 
-        // phooey --- this only works when nBits == 16        
+        // This only works when nBits == 16 --- TODO: fix for general # bits
         int Z = 0;
         
         if(nBits == 16)
@@ -386,14 +386,14 @@ public:
             constexpr int shift = intBits-M_2+3;
             Z = shift-(scale >> 1); 
         }
-        else
+        else if(nBits == 32)
         {
             // here are values for nBits == 32
             constexpr int shift = intBits-M_2+8+3; // // works for 1, 2 (when scale == O
             Z = shift-(scale >> 1); 
         }
 
-        uT newVal = y >> Z;
+        uT newVal = ShiftRight(y, Z);
         auto result = FixedPt<IntBits, FracBits, T>(T(newVal), true);
         
         return result;

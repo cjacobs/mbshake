@@ -299,6 +299,8 @@ FixedPt<2, (I+F)-2, T> dotNormFixed(const Vector3<FixedPt<I,F,T>>& a, const Vect
     using bigT = typename next_bigger_int<T>::type;
     using uBigT = typename next_bigger_int<uT>::type;
 
+    // compute squared length of a , squared length of b, and a dot b
+    // as a next-bigger int. if T is Fixed<9,7>, then these will be in 20.12 format
     uBigT aLenSq = ((bigT)a.x.value_*(bigT)a.x.value_) >> 2;
     aLenSq += ((bigT)a.y.value_*(bigT)a.y.value_) >> 2;
     aLenSq += ((bigT)a.z.value_*(bigT)a.z.value_) >> 2;
@@ -317,10 +319,10 @@ FixedPt<2, (I+F)-2, T> dotNormFixed(const Vector3<FixedPt<I,F,T>>& a, const Vect
     aDotB += ((bigT)a.z.value_*(bigT)b.z.value_) >> 2;
 
     // make aDotB positive
-    int sign = 1;
+    bool negative = false;
     if (aDotB < 0)
     {
-        sign = -1;
+        negative = true;
         aDotB = -aDotB;
     }
 
@@ -329,16 +331,23 @@ FixedPt<2, (I+F)-2, T> dotNormFixed(const Vector3<FixedPt<I,F,T>>& a, const Vect
     int bLenSqScale = leading_zeros(bLenSq) & (~0x01);
     int aDotBScale = leading_zeros((uBigT)aDotB) & (~0x01);
 
-    // Now these values all fit in an int of type T
-    aDotB = ShiftLeft(aDotB, aDotBScale - num_bits<T>::value);
-    aLenSq = ShiftLeft(aLenSq, aLenSqScale - num_bits<T>::value);
-    bLenSq = ShiftLeft(bLenSq, bLenSqScale - num_bits<T>::value);
+    uBigT aDotBBig= ShiftLeft(aDotB, aDotBScale); // aDotBBig is a bigT type with (20-scale) integer bits. "Real" value = (aDotBBig >> bits(uBigT)) << (20-scale)
 
-    uT denom = (uBigT(aLenSq)*bLenSq) >> (num_bits<T>::value); // 1 for sign
-    // still scaled by aLenSqScale+bLenSqScale
+    uT aLenSqTrunc = ShiftLeft(aLenSq, aLenSqScale - num_bits<T>::value); // aLenSqTrunc is a uT type with (20-scale) integer bits
+    uT bLenSqTrunc = ShiftLeft(bLenSq, bLenSqScale - num_bits<T>::value); // "Real" value = (aLenSqTrunc >> bits(uT)) << (20-scale)
 
-    FixedPt<I,F,T> denomFixed(denom, true);
-    return denomFixed;
+    uT denomSq = (uBigT(aLenSq)*bLenSq) >> (num_bits<T>::value); // "Real" denomSq = (denomSq>>bits(uT)) << (40-scaleA-scaleB)
+    FixedPt<0, I + F, uT> denomSqFixed(denomSq, true); // cast it to a fixed-pt denormalized value
+    FixedPt<2, I + F - 2, uT> denom = denomSqFixed.inv_sqrt(); // "Real" value is ((denom.value_)>>bits(T)-2) << -((40-scaleA-scaleB)/2)
+    float sqrtVal = float(denom);
+
+    uBigT quotient = (aDotBBig / denom.value_); // == aDotBBig*2^(20-scale-bits(bigT)) / denom*2^(bits(T)-2+((40-scaleA-scaleB)/2))
+    int leftShift = (20 - aDotBScale - num_bits<T>::value) - (((40 - aLenSqScale - bLenSqScale) / 2) + 2 + num_bits<uBigT>::value);
+    quotient >>= num_bits<T>::value;
+    int resultShift = (aLenSqScale + bLenSqScale) / 2 - aDotBScale;
+    FixedPt<2, I + F - 2, T> result(ShiftRight(quotient, resultShift-8), true);
+
+    return negative ? -result : result;
 }
 
 
