@@ -334,8 +334,8 @@ FixedPt<2, (I+F)-2, T> dotNormFixed(const Vector3<FixedPt<I,F,T>>& a, const Vect
     aLenSq = ShiftLeft(aLenSq, aLenSqScale - num_bits<T>::value);
     bLenSq = ShiftLeft(bLenSq, bLenSqScale - num_bits<T>::value);
 
-    uT denom = (uBigT(aLenSq)*bLenSq) >> (num_bits<T>::value+1); // 1 for sign
-    
+    uT denom = (uBigT(aLenSq)*bLenSq) >> (num_bits<T>::value); // 1 for sign
+    // still scaled by aLenSqScale+bLenSqScale
 
     FixedPt<I,F,T> denomFixed(denom, true);
     return denomFixed;
