@@ -148,6 +148,11 @@ TEST_CASE("FixedPt fixMul tests")
     REQUIRE(float(c) == 10 * 3);
 
     FixedPt<20, 12> c_20_12 = fixMul<20, 12, int32_t>(a, b);
+}
+
+
+TEST_CASE("Fixed pt comparison operators")
+{
 
 }
 

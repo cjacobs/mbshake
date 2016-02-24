@@ -4,14 +4,6 @@
 
 #include <type_traits>
 
-
-#include <iostream>
-using namespace std;
-
-
-
-
-
 template <typename T>
 class Vector3
 {
@@ -263,54 +255,14 @@ float dotNorm(const Vector3<T>& a, const Vector3<T>& b, float minLenThresh)
     return aDotB * fast_inv_sqrt(aLenSq*bLenSq);
 }
 
-// dotNorm must be in [-1,1]
-/*
-template <int IParam, int FParam, typename T>
-FixedPt<2,(IParam+FParam)-2,T> dotNormFixed(const Vector3<FixedPt<IParam,FParam,T>>& a, const Vector3<FixedPt<IParam,FParam,T>>& b)
-{
-    // ugh, aLenSq and bLenSq will overflow their datatypes
-    auto aLenSq = normSq(a);
-    auto bLenSq = normSq(b);
-
-    if (aLenSq == 0 || bLenSq == 0)
-    {
-        return FixedPt<2, (IParam+FParam)-2, T>(0); // TODO: ~0?
-    }
-
-auto denom = aLenSq*bLenSq; // yikes, we're going to double the # of int bits again
-    auto aDotB = dot(a,b); // ugh, need dot-product (and multiply) that returns fixed pt thing of correct size
-    return aDotB * denom.inv_sqrt(); // somehow do this intelligently
-}
-*/
-// dotNorm must be in [-1,1]
 template <int I, int F, typename T>
-FixedPt<I, F, T> dotNormFixed(const Vector3<FixedPt<I, F, T>>& a, const Vector3<FixedPt<I, F, T>>& b, const FixedPt<I, F, T> minLenThresh)
-{
-    // ugh, aLenSq and bLenSq will overflow their datatypes
-    auto aLenSq = normSq(a);
-    auto bLenSq = normSq(b);
-
-    if (aLenSq < minLenThresh || bLenSq < minLenThresh)
-    {
-        return FixedPt<I, F, T>(0);
-    }
-
-    fixed_16_0 aDotB = dot(a, b); // ugh, need dot-product (and multiply) that returns fixed pt thing of correct size
-    return aDotB * fast_inv_sqrt(aLenSq*bLenSq); // somehow do this intelligently
-}
-
-template <int I, int F, typename T>
-FixedPt<2, (I + F) - 2, T> dotNormFixed(const Vector3<FixedPt<I, F, T>>& a, const Vector3<FixedPt<I, F, T>>& b)
+FixedPt<2, (I + F) - 2, T> dotNormFixed(const Vector3<FixedPt<I, F, T>>& a, const Vector3<FixedPt<I, F, T>>& b, int minLenThresh)
 {
     // Accumulate the squared lengths and dot products in larger integer types, reserve 2 more bits to prevent overflow
     using uT = typename std::make_unsigned<T>::type;
     using bigT = typename next_bigger_int<T>::type;
     using uBigT = typename next_bigger_int<uT>::type;
 
-    // Compute squared length of a , squared length of b, and a dot b
-    // as a next-bigger int, but add 2 integer bits because we're summing 3 of them.
-    // If T is Fixed<9,7>, then these will be in 20.12 format
-    // int bits = 2*I+2
     FixedPt<2 * I + 2, 2 * F - 2> aLenSq = fixMul<2 * I + 2, 2 * F - 2, bigT>(a.x, a.x);
     aLenSq += fixMul<2 * I + 2, 2 * F - 2, bigT>(a.y, a.y);
     aLenSq += fixMul<2 * I + 2, 2 * F - 2, bigT>(a.z, a.z);
@@ -319,9 +271,9 @@ FixedPt<2, (I + F) - 2, T> dotNormFixed(const Vector3<FixedPt<I, F, T>>& a, cons
     bLenSq += fixMul<2 * I + 2, 2 * F - 2, bigT>(b.y, b.y);
     bLenSq += fixMul<2 * I + 2, 2 * F - 2, bigT>(b.z, b.z);
 
-    if (aLenSq == 0 || bLenSq == 0)
+    if (aLenSq <= minLenThresh || bLenSq <= minLenThresh)
     {
-        return FixedPt<2, (I + F) - 2, T>(0); // TODO: ~0?    
+        return FixedPt<2, (I + F) - 2, T>(-1); // TODO: ~0?    
     }
 
     FixedPt<2 * I + 2, 2 * F - 2> aDotB = fixMul<2 * I + 2, 2 * F - 2, bigT>(a.x, b.x);
@@ -330,7 +282,7 @@ FixedPt<2, (I + F) - 2, T> dotNormFixed(const Vector3<FixedPt<I, F, T>>& a, cons
 
     // make aDotB positive
     bool negative = false;
-    if (aDotB < 0) // TODO: implement this
+    if (aDotB < 0)
     {
         negative = true;
         aDotB = -aDotB;
@@ -341,31 +293,27 @@ FixedPt<2, (I + F) - 2, T> dotNormFixed(const Vector3<FixedPt<I, F, T>>& a, cons
     int bLenSqScale = leading_zeros((uBigT)bLenSq.value_) & (~0x01);
     int aDotBScale = leading_zeros((uBigT)aDotB.value_) & (~0x01);
 
-    FixedPt<0, 2 * (I + F), uBigT> aLenSqNorm((uBigT)aLenSq.value_ << aLenSqScale, true);
-    FixedPt<0, 2 * (I + F), uBigT> bLenSqNorm((uBigT)bLenSq.value_ << bLenSqScale, true);
-    FixedPt<0, 2 * (I + F), uBigT> aDotBNorm((uBigT)aDotB.value_ << aDotBScale, true); // may as well make this be half size, since we have to truncate it anyway
-    FixedPt<0, I + F, uT> aDotBNormTrunc(ShiftRight<num_bits<uBigT>::value - num_bits<uT>::value>(aDotBNorm.value_), true);
+    FixedPt<0, I + F, uT> aLenSqNorm(ShiftLeft(aLenSq.value_, aLenSqScale-(I+F)), true);
+    FixedPt<0, I + F, uT> bLenSqNorm(ShiftLeft(bLenSq.value_, bLenSqScale-(I+F)), true);
+    FixedPt<0, I + F, uT> aDotBNorm(ShiftLeft(aDotB.value_, aDotBScale-(I+F)), true);
 
     FixedPt<0, 2 * (I + F), uBigT> denomSqNorm = fixMul<0, 2 * (I + F), uBigT>(aLenSqNorm, bLenSqNorm);
     FixedPt<2, I + F - 2, uT> denomSqNormTrunc(ShiftRight<num_bits<uBigT>::value - num_bits<uT>::value + 2>(denomSqNorm.value_), true);
 
-    // i.e., denomSq = denomSqScaled * 2^(4*I+4-scaleA-scaleB)
-    // then, sqrt(denomSq) = sqrt(denomSqScaled) * 2^(2*I+2 - (scaleA+scaleB)/2)
-    // then, 1/sqrt(denomSq) = 1/sqrt(denomSqScaled) * 2^( (scaleA+scaleB)/2 - (2*I+2) ) 
-
-    FixedPt<2, I + F - 2, uT> recipDenomFixed = denomSqNormTrunc.inv_sqrt(); // * 2^( (scaleA+scaleB)/2 - (2*I+2)) // Note, in 2.X format, not denormalized
-
-    float recipSqrtVal = float(recipDenomFixed);
-
-    FixedPt<2, I + F - 2, uT> quotient = fixMul<2, I + F - 2, uT>(aDotBNormTrunc, recipDenomFixed);
+    FixedPt<2, I + F - 2, uT> recipDenomFixed = denomSqNormTrunc.inv_sqrt();
+    FixedPt<2, I + F - 2, uT> quotient = fixMul<2, I + F - 2, uT>(aDotBNorm, recipDenomFixed);
 
     int resultShift = (aLenSqScale + bLenSqScale) / 2 - aDotBScale;
     quotient.ShiftLeft(resultShift);
-    FixedPt<2, I + F - 2, T> result(quotient.value_, true); // need to shift right by num_bits to move to T
+    FixedPt<2, I + F - 2, T> result(quotient.value_, true);
     return negative ? -result : result;
 }
 
-
+template <int I, int F, typename T>
+FixedPt<2, (I + F) - 2, T> dotNormFixed(const Vector3<FixedPt<I, F, T>>& a, const Vector3<FixedPt<I, F, T>>& b)
+{
+    return dotNormFixed(a, b, 0);
+}
 
 template <typename T>
 float perpNorm(const Vector3<T>& a, const Vector3<T>& b, float minLenThresh)

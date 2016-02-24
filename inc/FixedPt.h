@@ -10,7 +10,7 @@
 namespace
 {
     template <typename T, int Mbits>
-    constexpr T sqrtVal(const int x) 
+    constexpr T sqrtVal(const int x)
     {
         return T(sqrtf(x) * (1 << Mbits));
     }
@@ -18,20 +18,20 @@ namespace
     template <typename T>
     constexpr T fixed_cast(float x, int mbits)
     {
-        return static_cast<T>(x * (1<<mbits));
+        return static_cast<T>(x * (1 << mbits));
     }
 
     template <typename T>
     constexpr T gen_entry(double x, int cubedBits, int x3Bits)
     {
         double y = 1.0 / sqrt(x);
-        T loPart = fixed_cast<T>(3*y, x3Bits-2);
+        T loPart = fixed_cast<T>(3 * y, x3Bits - 2);
         T hiPart = fixed_cast<T> (y*y*y, cubedBits);
-        if(x == 1.0)
+        if (x == 1.0)
         {
             hiPart = ~0;
         }
-        
+
         return (hiPart << x3Bits) | loPart;
     }
 
@@ -43,7 +43,7 @@ namespace
     // lookup table for 16-bit fixed-pt inv sqrt
     // upper 12 bits store y^3 in 0.12 format, lower 4 store 3y in 2.2
     uint16_t inv_sqrt_table[] = // 12-entry version
-        {
+    {
 #if 0
             gen_entry<uint16_t>(1.0,  cBits, tBits),
             gen_entry<uint16_t>(1.25, cBits, tBits),
@@ -58,18 +58,18 @@ namespace
             gen_entry<uint16_t>(3.5,  cBits, tBits),
             gen_entry<uint16_t>(3.75, cBits, tBits),
 
-            // x = 01.00 = 1.0,  y = 1.0,         3y = 3.0,         y^3 = 1.0
-            // x = 01.01 = 1.25, y = 0.894427191, 3y = 2.683281573, y^3 = 1.953125
-            // x = 01.10 = 1.5,  y = 0.816496580, 3y = 2.449489742, y^3 = 3.375
-            // x = 01.11 = 1.75, y = 0.755928946, 3y = 2.267786838, y^3 = 5.359375
-            // x = 10.00 = 2.0,  y = 0.707106781, 3y = 2.121320343, y^3 = 8.0
-            // x = 10.01 = 2.25, y = 0.666666666, 3y = 2.0,         y^3 = 11.390625
-            // x = 10.10 = 2.5,  y = 0.632455532, 3y = 1.897366596, y^3 = 15.625
-            // x = 10.11 = 2.75, y = 0.603022689, 3y = 1.809068067, y^3 = 20.796875
-            // x = 11.00 = 3.0,  y = 0.577350269, 3y = 1.732050807, y^3 = 27.0
-            // x = 11.01 = 3.25, y = 0.554700196, 3y = 1.664100588, y^3 = 34.328125
-            // x = 11.10 = 3.5,  y = 0.534522483, 3y = 1.603567451, y^3 = 42.875
-            // x = 11.11 = 3.75, y = 0.516397779, 3y = 1.549193338, y^3 = 52.734375
+        // x = 01.00 = 1.0,  y = 1.0,         3y = 3.0,         y^3 = 1.0
+        // x = 01.01 = 1.25, y = 0.894427191, 3y = 2.683281573, y^3 = 1.953125
+        // x = 01.10 = 1.5,  y = 0.816496580, 3y = 2.449489742, y^3 = 3.375
+        // x = 01.11 = 1.75, y = 0.755928946, 3y = 2.267786838, y^3 = 5.359375
+        // x = 10.00 = 2.0,  y = 0.707106781, 3y = 2.121320343, y^3 = 8.0
+        // x = 10.01 = 2.25, y = 0.666666666, 3y = 2.0,         y^3 = 11.390625
+        // x = 10.10 = 2.5,  y = 0.632455532, 3y = 1.897366596, y^3 = 15.625
+        // x = 10.11 = 2.75, y = 0.603022689, 3y = 1.809068067, y^3 = 20.796875
+        // x = 11.00 = 3.0,  y = 0.577350269, 3y = 1.732050807, y^3 = 27.0
+        // x = 11.01 = 3.25, y = 0.554700196, 3y = 1.664100588, y^3 = 34.328125
+        // x = 11.10 = 3.5,  y = 0.534522483, 3y = 1.603567451, y^3 = 42.875
+        // x = 11.11 = 3.75, y = 0.516397779, 3y = 1.549193338, y^3 = 52.734375
 #else
                 0xfffc,
                 0xb72a,
@@ -84,16 +84,16 @@ namespace
                 0x2716,
                 0x2346
 #endif                
-        };
-    
-    
+    };
+
+
 }
 
 // TODO: allow IntBits to be > # bits
 // (and allow negative # frac bits)
 template <typename T> class Vector3;
 
-template <int IntBits, int FracBits, typename T = typename int_of_size<IntBits+FracBits>::type>
+template <int IntBits, int FracBits, typename T = typename int_of_size<IntBits + FracBits>::type>
 class FixedPt
 {
 public:
@@ -117,30 +117,50 @@ public:
         value_ = x.value_;
     }
 
-    bool operator ==(FixedPt<IntBits, FracBits, T> x)
+    bool operator ==(FixedPt<IntBits, FracBits, T> x) const
     {
         return value_ == x.value_;
     }
 
-    bool operator ==(int x)
+    bool operator ==(int x) const
     {
         return (*this) == FixedPt<IntBits, FracBits, T>(x);
     }
 
-    bool operator !=(FixedPt<IntBits, FracBits, T> x)
+    bool operator !=(FixedPt<IntBits, FracBits, T> x) const
     {
         return !(*this == x);
     }
 
-    bool operator !=(int x)
+    bool operator !=(int x) const
     {
         return !(*this == x);
     }
 
-    bool operator <(int x)
+    bool operator <(FixedPt<IntBits, FracBits, T> x)
+    {
+        return value_ < x.value_;
+    }
+
+    bool operator >(FixedPt<IntBits, FracBits, T> x)
+    {
+        return value_ > x.value_;
+    }
+
+    bool operator <=(FixedPt<IntBits, FracBits, T> x)
+    {
+        return value_ <= x.value_;
+    }
+
+    bool operator >=(FixedPt<IntBits, FracBits, T> x)
+    {
+        return value_ >= x.value_;
+    }
+
+    bool operator <(int x) const
     {
         auto intPart = static_cast<int>(*this);
-        if(intPart > x)
+        if (intPart > x)
         {
             return false;
         }
@@ -150,9 +170,8 @@ public:
         }
         else
         {
-            // what about sign?
-            auto fracPart = (~0 << FracBits)&value_;
-            if(fracPart == 0)
+            auto fracPart = (~0 >> IntBits) & value_;
+            if (fracPart == 0)
             {
                 return false;
             }
@@ -163,6 +182,40 @@ public:
         }
     }
 
+    bool operator >(int x) const
+    {
+        auto intPart = static_cast<int>(*this);
+        if (intPart > x)
+        {
+            return true;
+        }
+        else if (intPart < x)
+        {
+            return false;
+        }
+        else
+        {
+            auto fracPart = (~0 >> IntBits) & value_;
+            if (fracPart == 0)
+            {
+                return false;
+            }
+            else
+            {
+                return (intPart >= 0);
+            }
+        }
+    }
+
+    bool operator >=(int x) const
+    {
+        return !((*this) < x);
+    }
+
+    bool operator <=(int x) const
+    {
+        return !((*this) > x);
+    }
 
     static const int max_int_value = std::numeric_limits<T>::max() >> FracBits;
     static const int min_int_value = std::numeric_limits<T>::min() >> FracBits;
@@ -202,13 +255,13 @@ public:
     }
 
     template <typename Tb>
-    void operator +=(const FixedPt<IntBits,FracBits,Tb>& b)
+    void operator +=(const FixedPt<IntBits, FracBits, Tb>& b)
     {
         value_ += b.value_;
     }
 
     template <int Ib, int Fb, typename Tb>
-    void operator +=(const FixedPt<Ib,Fb,Tb>& b)
+    void operator +=(const FixedPt<Ib, Fb, Tb>& b)
     {
         value_ += ShiftValue<FracBits, Fb>(b.value_);
     }
@@ -281,18 +334,18 @@ public:
         // I think we want to shift the value with the most int bits to put its first '1' in the MSB
     }
     */
-        /* // TODO: check this
-    template <int FracBits2>
-    void operator /=(const FixedPt<T, FracBits2>& x)
-    {
-        long long prod = value_ / x.value_;
-        value_ = prod << FracBits2;
-    }
-    */
+    /* // TODO: check this
+template <int FracBits2>
+void operator /=(const FixedPt<T, FracBits2>& x)
+{
+    long long prod = value_ / x.value_;
+    value_ = prod << FracBits2;
+}
+*/
 
-    //
-    // operator >>=
-    //
+//
+// operator >>=
+//
     void operator <<= (int s)
     {
         value_ <<= s;
@@ -307,12 +360,12 @@ public:
     {
         value_ = ::ShiftLeft(value_, s);
     }
-        
+
     void ShiftRight(int s)
     {
         value_ = ::ShiftRight(value_, s);
     }
-        
+
 
     //
     // Gross stuff
@@ -335,7 +388,7 @@ public:
             }
 
         } while (count-- != 0);
-        
+
         return FixedPt<IntBits, FracBits, T>(root, true);
     }
 
@@ -349,7 +402,7 @@ public:
         unsigned int mask = 0b01111;
         T intPart = value_ >> FracBits;
         T out = 0;
-        if(intPart != 0 || FracBits == 0)
+        if (intPart != 0 || FracBits == 0)
         {
             int n = 0;
             while (intPart != 0 && intPart != ~0)
@@ -363,11 +416,11 @@ public:
         {
             // shift left to fall on multiple of 4
             T tmp = value_;
-            int shift = (4-1) - ((FracBits-1)%4);
+            int shift = (4 - 1) - ((FracBits - 1) % 4);
             tmp <<= shift;
-            int numBlocks = (FracBits+shift)/4;
-            int n = 2*numBlocks;
-            while(tmp != 0 && tmp != ~0)
+            int numBlocks = (FracBits + shift) / 4;
+            int n = 2 * numBlocks;
+            while (tmp != 0 && tmp != ~0)
             {
                 out = lookupTable[tmp&mask] >> n;
                 tmp >>= 4;
@@ -382,7 +435,7 @@ public:
     // http://stackoverflow.com/questions/6286450/inverse-sqrt-for-fixed-point
     FixedPt<IntBits, FracBits, T> inv_sqrt()
     {
-        if(value_ <= 0) // 
+        if (value_ <= 0) // 
         {
             return FixedPt<IntBits, FracBits, T>(~0, true);
         }
@@ -396,32 +449,31 @@ public:
         int scale = leading_zeros(val) & (~0x01); // round scale down to be even
         val = val << scale; // val now in 2.X fixed format, in [1,3)  (so, top 2 bits are 01, 10, or 11 (but not 00)
 
-        float valFloat = float(val) / float(1 << (nBits - (IntBits-scale)));
-        float thisFloat = float(*this);
 
         // Lookup table thing
-        const int tableIndex = (val>>(nBits-4)) - 4;
+        const int tableIndex = (val >> (nBits - 4)) - 4;
         uint16_t lookupVal = inv_sqrt_table[tableIndex];
 
 #if DEBUG_INV_SQRT
+        float valFloat = float(val) / float(1 << (nBits - (IntBits - scale)));
         float inv_sqrt = 1.0 / sqrtf(valFloat);
-        uT yCubedReal = uT((inv_sqrt*inv_sqrt*inv_sqrt) * (1<<(nBits-1)) *2); // oh crap, this fails for 1.0 --- we can't represent 1 as 0.X
-        if(yCubedReal == 0)
+        uT yCubedReal = uT((inv_sqrt*inv_sqrt*inv_sqrt) * (1 << (nBits - 1)) * 2); // oh crap, this fails for 1.0 --- we can't represent 1 as 0.X
+        if (yCubedReal == 0)
         {
             yCubedReal = ~0;
         }
         // check for 1 case ?
-        uT threeYReal = uT(3*inv_sqrt * (1 << (nBits-2)));
+        uT threeYReal = uT(3 * inv_sqrt * (1 << (nBits - 2)));
 #endif
 
         uT yCubed = lookupVal;
         uT threeY = lookupVal << cBits;
-        
+
         // check this:
-        bigT y = (threeY - (((bigT)yCubed*val)>>nBits)); // y is 3y/2 + xy^3/2 ---  in 1.X fixed format 
+        bigT y = (threeY - (((bigT)yCubed*val) >> nBits)); // y is 3y/2 + xy^3/2 ---  in 1.X fixed format 
         bigT s = ((bigT)y*val) >> nBits; // s = y*x in 3.X fixed 
-        const uBigT three = 0x03 << (nBits-4); // 3 in 4.X fixed, == 3/2 in 3.X fixed
-        s = three - (((bigT)y*s)>>nBits); // s now = 3 - y^2*x in 4.X fixed
+        const uBigT three = 0x03 << (nBits - 4); // 3 in 4.X fixed, == 3/2 in 3.X fixed
+        s = three - (((bigT)y*s) >> nBits); // s now = 3 - y^2*x in 4.X fixed
         y = ((bigT)y*s) >> nBits; // now y = y(3-y^2*x) in 5.X fixed == (3/2)y - y^2*x/2 in 4.X fixed
 
         // now y is sqrt of our normalized value n 4.X format
@@ -435,22 +487,22 @@ public:
 
         // This only works when nBits == 16 --- TODO: fix for general # bits
         int Z = 0;
-        
-        if(nBits == 16)
+
+        if (nBits == 16)
         {
-            constexpr int shift = IntBits-M_2+3;
-            Z = shift-(scale >> 1); 
+            constexpr int shift = IntBits - M_2 + 3;
+            Z = shift - (scale >> 1);
         }
-        else if(nBits == 32)
+        else if (nBits == 32)
         {
             // here are values for nBits == 32
-            constexpr int shift = IntBits-M_2+8+3; // // works for 1, 2 (when scale == O
-            Z = shift-(scale >> 1); 
+            constexpr int shift = IntBits - M_2 + 8 + 3; // // works for 1, 2 (when scale == O
+            Z = shift - (scale >> 1);
         }
 
         uT newVal = ::ShiftRight(y, Z);
         auto result = FixedPt<IntBits, FracBits, T>(T(newVal), true);
-        
+
         return result;
     }
 
@@ -459,11 +511,11 @@ public:
     {
         cout << "uint16_t inv_sqrt_table[] = // 12-entry version" << endl;
         cout << "\t{" << endl;
-        
-        int numEntries = sizeof(inv_sqrt_table)/sizeof(inv_sqrt_table[0]);
-        for(int index = 0; index < numEntries); index++)
+
+        int numEntries = sizeof(inv_sqrt_table) / sizeof(inv_sqrt_table[0]);
+        for (int index = 0; index < numEntries); index++)
         {
-            char delim = (index == numEntries-1) ? ' ' : ',';
+            char delim = (index == numEntries - 1) ? ' ' : ',';
             cout << "\t0x" << std::hex << inv_sqrt_table[index] << delim << endl;
         }
         cout << "\t};" << endl;
@@ -471,7 +523,7 @@ public:
 #endif
 
 
-// private:
+    // private:
     template <int IntBits2, int FracBits2, typename T2>
     friend class FixedPt;
 
@@ -586,57 +638,57 @@ FixedPt<IntBits, FracBits, T> operator /(FixedPt<IntBits, FracBits, T> a, FixedP
 //
 
 template <int Ir, int Fr, typename Tr, // = typename int_of_size<IntBits+FracBits>::type,
-                int Ia, int Fa, typename Ta, 
-                int Ib, int Fb, typename Tb>
-FixedPt<Ir, Fr, Tr> fixMul(FixedPt<Ia, Fa, Ta> a, FixedPt<Ib, Fb, Tb> b)
+    int Ia, int Fa, typename Ta,
+    int Ib, int Fb, typename Tb>
+    FixedPt<Ir, Fr, Tr> fixMul(FixedPt<Ia, Fa, Ta> a, FixedPt<Ib, Fb, Tb> b)
 {
     using bigT = typename next_bigger_int<Tr>::type;
 
     bigT r = (bigT)a.value_ * b.value_;
-    FixedPt<Ir, Fr, Tr> result(ShiftRight<Fa+Fb-Fr>(r), true);
+    FixedPt<Ir, Fr, Tr> result(ShiftRight<Fa + Fb - Fr>(r), true);
     return result;
 }
 
 template <int Ir, int Fr, typename Tr, // = typename int_of_size<IntBits+FracBits>::type,
-                int Ib, int Fb, typename Tb>
-FixedPt<Ir, Fr, Tr> fixMul(int a, FixedPt<Ib, Fb, Tb> b)
+    int Ib, int Fb, typename Tb>
+    FixedPt<Ir, Fr, Tr> fixMul(int a, FixedPt<Ib, Fb, Tb> b)
 {
     using bigT = typename next_bigger_int<Tr>::type;
 
     bigT r = (bigT)a * b.value_;
-    FixedPt<Ir, Fr, Tr> result(ShiftRight<Fb-Fr>(r), true);
+    FixedPt<Ir, Fr, Tr> result(ShiftRight<Fb - Fr>(r), true);
     return result;
 }
 
 template <int Ir, int Fr, typename Tr, // = typename int_of_size<IntBits+FracBits>::type,
-          int Ia, int Fa, typename Ta>
-FixedPt<Ir, Fr, Tr> fixMul(FixedPt<Ia, Fa, Ta> a, int b)
+    int Ia, int Fa, typename Ta>
+    FixedPt<Ir, Fr, Tr> fixMul(FixedPt<Ia, Fa, Ta> a, int b)
 {
     using bigT = typename next_bigger_int<Tr>::type;
 
     bigT r = (bigT)a.value_ * b;
-    FixedPt<Ir, Fr, Tr> result(ShiftRight<Fa-Fr>(r), true);
+    FixedPt<Ir, Fr, Tr> result(ShiftRight<Fa - Fr>(r), true);
     return result;
 }
 
 template <int Ir, int Fr, typename Tr, // = typename int_of_size<IntBits+FracBits>::type,
-          int Ia, int Fa, typename Ta>
-FixedPt<Ir, Fr, Tr> fixShiftLeft(FixedPt<Ia, Fa, Ta> x, int s)
+    int Ia, int Fa, typename Ta>
+    FixedPt<Ir, Fr, Tr> fixShiftLeft(FixedPt<Ia, Fa, Ta> x, int s)
 {
     using bigT = typename next_bigger_int<Tr>::type;
 
-    bigT r = ShiftLeft((bigT)x.value_, s-Fr+Fa);
+    bigT r = ShiftLeft((bigT)x.value_, s - Fr + Fa);
     FixedPt<Ir, Fr, Tr> result(r, true);
     return result;
 }
 
 template <int Ir, int Fr, typename Tr, // = typename int_of_size<IntBits+FracBits>::type,
-          int Ia, int Fa, typename Ta>
-FixedPt<Ir, Fr, Tr> fixShiftRight(FixedPt<Ia, Fa, Ta> x, int s)
+    int Ia, int Fa, typename Ta>
+    FixedPt<Ir, Fr, Tr> fixShiftRight(FixedPt<Ia, Fa, Ta> x, int s)
 {
     using bigT = typename next_bigger_int<Tr>::type;
 
-    bigT r = ShiftRight((bigT)x.value_, s+Fr-Fa);
+    bigT r = ShiftRight((bigT)x.value_, s + Fr - Fa);
     FixedPt<Ir, Fr, Tr> result(r, true);
     return result;
 }

@@ -9,15 +9,18 @@
 
 
 // #defines for optional parts
-#define USE_SHAKE_GATE 1
-
+#define USE_SHAKE_GATE 0
 
 //using filteredComponent_t = float;
 using filteredComponent_t = fixed_9_7;
 using filteredSample_t = Vector3<filteredComponent_t>;
 
+#define FIXED_MATH 1
+#if FIXED_MATH
+using predictionValue_t = fixed_9_7;
+#else
 using predictionValue_t = float;
-//using predictionValue_t = fixed_9_7;
+#endif
 
 // using filterCoeff_t = float;
 using filterCoeff_t = fixed_2_14;
@@ -47,18 +50,14 @@ private:
     void processDotFeature(const byteVector3& currentSample, int dotWavelength, MeanDelayType& meanDelay, MeanStatsType& delayDotStats);
 
     predictionValue_t getShakePrediction();
-    predictionValue_t getTapPrediction();
+    float getTapPrediction();
     int detectGesture(); // needs to be called at 50hz (for now)
 
     // Compile-time constants (used as template parameters)
-    static constexpr int dotWavelength1 = 4;
     static constexpr int dotWavelength2 = 5;
-    static constexpr int dotWavelength3 = 6;
     static constexpr int dotWavelength4 = 8;
 
-    static constexpr int dotMeanWindow1 = dotWavelength1; // / 2;
     static constexpr int dotMeanWindow2 = dotWavelength2; // / 2;
-    static constexpr int dotMeanWindow3 = dotWavelength3; // / 2;
     static constexpr int dotMeanWindow4 = dotWavelength4; // / 2;
     
     static constexpr int shakeStatsBufferSize = 4;
@@ -90,23 +89,17 @@ private:
     
     // TODO: these can easily be fixed-pt (but check range of dotNorm function)
     // TODO: quantize these to shorts or something
-    DelayBuffer<float, dotMeanWindow1 + 1> dotDelayBuffer1;
-    RunningMean<dotMeanWindow1, dotMeanWindow1+1, float> dot1Stats;
+    DelayBuffer<predictionValue_t, dotMeanWindow2 + 1> dotDelayBuffer2;
+    RunningMean<dotMeanWindow2, dotMeanWindow2+1, predictionValue_t> dot2Stats;
     
-    DelayBuffer<float, dotMeanWindow2 + 1> dotDelayBuffer2;
-    RunningMean<dotMeanWindow2, dotMeanWindow2+1, float> dot2Stats;
-    
-    DelayBuffer<float, dotMeanWindow3 + 1> dotDelayBuffer3;
-    RunningMean<dotMeanWindow3, dotMeanWindow3+1, float> dot3Stats;
-    
-    DelayBuffer<float, dotMeanWindow4 + 1> dotDelayBuffer4;
-    RunningMean<dotMeanWindow4, dotMeanWindow4+1, float> dot4Stats;
+    DelayBuffer<predictionValue_t, dotMeanWindow4 + 1> dotDelayBuffer4;
+    RunningMean<dotMeanWindow4, dotMeanWindow4+1, predictionValue_t> dot4Stats;
     
     DelayBuffer<float, tapK+1> quietVarDelay;
 
     // TODO: fixed-pt
     EventThresholdFilter<predictionValue_t> shakeEventFilter;
-    EventThresholdFilter<predictionValue_t> tapEventFilter;
+    EventThresholdFilter<float> tapEventFilter;
 
     // timing stuff
     unsigned long prevTime = 0;

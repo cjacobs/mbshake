@@ -1,7 +1,5 @@
 #pragma once
 
-// TODO: add hysteresis for turning off as well
-
 template <typename T>
 class EventThresholdFilter
 {

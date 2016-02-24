@@ -3,9 +3,10 @@
 #include "RunningStats.h"
 #include "EventThresholdFilter.h"
 #include "IirFilter.h"
-#include "MicroBitAccess.h"
 #include "FixedPt.h"
 #include "MicroBitGestureDetector.h"
+
+#include "MicroBitAccess.h"
 
 #include <algorithm> // for std::max
 
@@ -17,7 +18,7 @@ const filterCoeff_t gravityFilterCoeff = filterCoeff_t(1/32.0);
 
 const float minLenThresh = 1; 
 
-const float shakeGestureThreshold = 0.4f;
+const predictionValue_t shakeGestureThreshold = predictionValue_t(0.5f);
 const int shakeEventCountThreshold = 6;
 const int shakeEventCountLowThreshold = 3;
 
@@ -26,7 +27,7 @@ const float shakeGateThreshSquared = 40000; //4000000.0f;
 #endif
 
 // Tap stuff
-const float tapGestureThreshold = 200.0f; // TODO: this can be an int
+const int tapGestureThreshold = 200;
 const int tapEventCountThreshold = 1;
 
 //const float tapScaleDenominator = 2.5f;
@@ -52,12 +53,10 @@ MicroBitGestureDetector::MicroBitGestureDetector() : gravityFilter(gravityFilter
 #if USE_SHAKE_GATE
                                      shakeThreshStats(sampleDelayBuffer),
 #endif
-                                     dot1Stats(dotDelayBuffer1),
                                      dot2Stats(dotDelayBuffer2),
-                                     dot3Stats(dotDelayBuffer3),
                                      dot4Stats(dotDelayBuffer4),
     shakeEventFilter(shakeGestureThreshold, shakeEventCountThreshold, shakeEventCountLowThreshold),
-    tapEventFilter(tapGestureThreshold, tapEventCountThreshold, 0)
+    tapEventFilter(tapGestureThreshold, tapEventCountThreshold, predictionValue_t(0))
 {
     init(); // ?
 }
@@ -93,9 +92,19 @@ void MicroBitGestureDetector::processDotFeature(const byteVector3& currentSample
     float dot1a = dotNorm(quantizedCurrentSample, quantizeSample(sampleDelayBuffer.getDelayedSample(dotWavelength), quantRate), minLenThresh);
     float dot1b = dotNorm(quantizedCurrentSample, quantizeSample(sampleDelayBuffer.getDelayedSample(2 * dotWavelength), quantRate), minLenThresh);
 #else
-    // TODO: implement fixed-pt versions of dotNorm
+
+#if FIXED_MATH
+    Vector3<predictionValue_t> fixedSampleNow(currentSample);
+    Vector3<predictionValue_t> fixedSampleDelay1(sampleDelayBuffer.getDelayedSample(dotWavelength));
+    Vector3<predictionValue_t> fixedSampleDelay2(sampleDelayBuffer.getDelayedSample(2*dotWavelength));
+    auto dot1a = dotNormFixed(fixedSampleNow, fixedSampleDelay1, 0);
+    auto dot1b = dotNormFixed(fixedSampleNow, fixedSampleDelay2, 0);
+#else
     float dot1a = dotNorm(currentSample, sampleDelayBuffer.getDelayedSample(dotWavelength), minLenThresh);
     float dot1b = dotNorm(currentSample, sampleDelayBuffer.getDelayedSample(2 * dotWavelength), minLenThresh);
+#endif
+
+
 #endif
 
     if (dot1a < 0 && dot1b > 0)
@@ -105,8 +114,8 @@ void MicroBitGestureDetector::processDotFeature(const byteVector3& currentSample
     }
     else
     {
-        meanDelay.addSample(0.0);
-        delayDotStats.addSample(0.0);
+        meanDelay.addSample(predictionValue_t(0));
+        delayDotStats.addSample(predictionValue_t(0));
     }
 }
 
@@ -149,7 +158,7 @@ predictionValue_t MicroBitGestureDetector::getShakePrediction()
     }
 }
 
-predictionValue_t MicroBitGestureDetector::getTapPrediction()
+float MicroBitGestureDetector::getTapPrediction()
 {
     // If previous quiet window was very very quiet (e.g., 0), then
     // increase output (when micro:bit is sitting on table, tap
@@ -216,7 +225,7 @@ int MicroBitGestureDetector::detectGesture()
 
     processSample(sample);
 
-    float diagnosticVal = 0;
+    predictionValue_t diagnosticVal = predictionValue_t(0);
     if(isPrinting) diagnosticVal = getShakePrediction();
 
     auto& outputSample = lastFilteredSample;
@@ -230,7 +239,7 @@ int MicroBitGestureDetector::detectGesture()
             shakeEventFilter.reset();
             if(isPrinting)
             {
-                serialPrintLn("Tap\t", systemTime(), "\t", buttonA(), "\t", buttonB(), "\t", outputSample, "\t", diagnosticVal);
+                serialPrintLn("Tap\t", systemTime(), "\t", buttonA(), "\t", buttonB(), "\t", outputSample, "\t", (float)diagnosticVal);
             }
             return MICROBIT_ACCELEROMETER_TAP;
         }
@@ -245,7 +254,7 @@ int MicroBitGestureDetector::detectGesture()
             tapEventFilter.reset();
             if(isPrinting)
             {
-                serialPrintLn("Shake\t", systemTime(), "\t", buttonA(), "\t", buttonB(), "\t", outputSample, "\t", diagnosticVal);
+                serialPrintLn("Shake\t", systemTime(), "\t", buttonA(), "\t", buttonB(), "\t", outputSample, "\t", (float)diagnosticVal);
             }
             return MICROBIT_ACCELEROMETER_SHAKE;
         }
@@ -257,7 +266,7 @@ int MicroBitGestureDetector::detectGesture()
 
     if(isPrinting)
     {
-        serialPrintLn("\t", systemTime(), "\t", buttonA(), "\t", buttonB(), "\t", outputSample, "\t", diagnosticVal);
+        serialPrintLn("\t", systemTime(), "\t", buttonA(), "\t", buttonB(), "\t", outputSample, "\t", (float)diagnosticVal);
     }
 
     return 0; // none

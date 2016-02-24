@@ -51,7 +51,7 @@ private:
     const int windowSize_ = WindowSize;
     DelayBuffer<S, BufferSize>& delayLine_;
 
-    T accumSum_ = 0;
+    T accumSum_ = S(0);
 };
 
 // RunningStats --- mean and variance
