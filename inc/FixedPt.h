@@ -100,7 +100,7 @@ public:
     FixedPt() : value_(0) {}
     FixedPt(const FixedPt<IntBits, FracBits, T>& x) : value_(x.value_) {}
 
-    explicit FixedPt(int val) : value_(ShiftLeft<FracBits>(val)) {}
+    explicit FixedPt(int val) : value_(::ShiftLeft<FracBits>(val)) {}
 
     explicit FixedPt(float val) : value_(T(std::ldexp(val, FracBits))) {}
 
@@ -137,6 +137,33 @@ public:
         return !(*this == x);
     }
 
+    bool operator <(int x)
+    {
+        auto intPart = static_cast<int>(*this);
+        if(intPart > x)
+        {
+            return false;
+        }
+        else if (intPart < x)
+        {
+            return true;
+        }
+        else
+        {
+            // what about sign?
+            auto fracPart = (~0 << FracBits)&value_;
+            if(fracPart == 0)
+            {
+                return false;
+            }
+            else
+            {
+                return (intPart < 0);
+            }
+        }
+    }
+
+
     static const int max_int_value = std::numeric_limits<T>::max() >> FracBits;
     static const int min_int_value = std::numeric_limits<T>::min() >> FracBits;
     static const int int_bits = IntBits;
@@ -145,12 +172,12 @@ public:
     // casting operators
     operator int() const
     {
-        return ShiftRight<FracBits>((int)value_);
+        return ::ShiftRight<FracBits>((int)value_);
     }
 
     operator long int() const
     {
-        return ShiftRight<FracBits>((long int)value_);
+        return ::ShiftRight<FracBits>((long int)value_);
     }
 
     operator float() const
@@ -228,7 +255,7 @@ public:
     {
         using bigT = typename next_bigger_int<T>::type;
         bigT prod = value_ * x.value_;
-        value_ = ShiftRight<FracBits2>(prod);
+        value_ = ::ShiftRight<FracBits2>(prod);
     }
 
     // operator /=
@@ -242,7 +269,7 @@ public:
     {
         typedef typename next_bigger_int<T>::type bigger_t;
         bigger_t rVal = (value_ << num_bits<T>::value) / b.value_;
-        value_ = ShiftRight<num_bits<T>::value - FracBits2>(rVal);
+        value_ = ::ShiftRight<num_bits<T>::value - FracBits2>(rVal);
         //        value_ = rVal >> (num_bits<T>::value - FracBits2);
     }
 
@@ -262,7 +289,34 @@ public:
         value_ = prod << FracBits2;
     }
     */
-    
+
+    //
+    // operator >>=
+    //
+    void operator <<= (int s)
+    {
+        value_ <<= s;
+    }
+
+    void operator >>= (int s)
+    {
+        value_ >>= s;
+    }
+
+    void ShiftLeft(int s)
+    {
+        value_ = ::ShiftLeft(value_, s);
+    }
+        
+    void ShiftRight(int s)
+    {
+        value_ = ::ShiftRight(value_, s);
+    }
+        
+
+    //
+    // Gross stuff
+    //
     FixedPt<IntBits, FracBits, T> sqrtx()
     {
         // adapted from http://www.realitypixels.com/turk/computergraphics/FixedSqrt.pdf
@@ -394,7 +448,7 @@ public:
             Z = shift-(scale >> 1); 
         }
 
-        uT newVal = ShiftRight(y, Z);
+        uT newVal = ::ShiftRight(y, Z);
         auto result = FixedPt<IntBits, FracBits, T>(T(newVal), true);
         
         return result;
@@ -525,6 +579,68 @@ FixedPt<IntBits, FracBits, T> operator /(FixedPt<IntBits, FracBits, T> a, FixedP
     x /= b;
     return x;
 }
+
+
+//
+// fixed-pt math with arbitrary bit sizes
+//
+
+template <int Ir, int Fr, typename Tr, // = typename int_of_size<IntBits+FracBits>::type,
+                int Ia, int Fa, typename Ta, 
+                int Ib, int Fb, typename Tb>
+FixedPt<Ir, Fr, Tr> fixMul(FixedPt<Ia, Fa, Ta> a, FixedPt<Ib, Fb, Tb> b)
+{
+    using bigT = typename next_bigger_int<Tr>::type;
+
+    bigT r = (bigT)a.value_ * b.value_;
+    FixedPt<Ir, Fr, Tr> result(ShiftRight<Fa+Fb-Fr>(r), true);
+    return result;
+}
+
+template <int Ir, int Fr, typename Tr, // = typename int_of_size<IntBits+FracBits>::type,
+                int Ib, int Fb, typename Tb>
+FixedPt<Ir, Fr, Tr> fixMul(int a, FixedPt<Ib, Fb, Tb> b)
+{
+    using bigT = typename next_bigger_int<Tr>::type;
+
+    bigT r = (bigT)a * b.value_;
+    FixedPt<Ir, Fr, Tr> result(ShiftRight<Fb-Fr>(r), true);
+    return result;
+}
+
+template <int Ir, int Fr, typename Tr, // = typename int_of_size<IntBits+FracBits>::type,
+          int Ia, int Fa, typename Ta>
+FixedPt<Ir, Fr, Tr> fixMul(FixedPt<Ia, Fa, Ta> a, int b)
+{
+    using bigT = typename next_bigger_int<Tr>::type;
+
+    bigT r = (bigT)a.value_ * b;
+    FixedPt<Ir, Fr, Tr> result(ShiftRight<Fa-Fr>(r), true);
+    return result;
+}
+
+template <int Ir, int Fr, typename Tr, // = typename int_of_size<IntBits+FracBits>::type,
+          int Ia, int Fa, typename Ta>
+FixedPt<Ir, Fr, Tr> fixShiftLeft(FixedPt<Ia, Fa, Ta> x, int s)
+{
+    using bigT = typename next_bigger_int<Tr>::type;
+
+    bigT r = ShiftLeft((bigT)x.value_, s-Fr+Fa);
+    FixedPt<Ir, Fr, Tr> result(r, true);
+    return result;
+}
+
+template <int Ir, int Fr, typename Tr, // = typename int_of_size<IntBits+FracBits>::type,
+          int Ia, int Fa, typename Ta>
+FixedPt<Ir, Fr, Tr> fixShiftRight(FixedPt<Ia, Fa, Ta> x, int s)
+{
+    using bigT = typename next_bigger_int<Tr>::type;
+
+    bigT r = ShiftRight((bigT)x.value_, s+Fr-Fa);
+    FixedPt<Ir, Fr, Tr> result(r, true);
+    return result;
+}
+
 
 typedef FixedPt<2, 14> fixed_2_14;
 typedef FixedPt<4, 12> fixed_4_12;

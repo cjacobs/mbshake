@@ -49,18 +49,25 @@ TEST_CASE("fixed_point dot")
 
 TEST_CASE("fixed_point dot norm")
 {
-    for (auto floatVec: {floatVector3(1,2,3), floatVector3(5,6,7), floatVector3(10,10,12), floatVector3(0.5,0.25,0.1)})
+    for (auto floatVecA : { floatVector3(1,2,3), floatVector3(5,6,7), floatVector3(10,10,12), floatVector3(0.5,0.25,0.1) })
     {
-        Vector3<FixedPt<9,7>> fixedVec = Vector3<FixedPt<9,7>>(floatVec);
-        REQUIRE(floatVec.x == Approx(float(fixedVec.x)).epsilon(0.01));
-        REQUIRE(floatVec.y == Approx(float(fixedVec.y)).epsilon(0.01));
-        float dotNormVal = dotNorm(floatVec, floatVec);
+        Vector3<FixedPt<9, 7>> fixedVecA = Vector3<FixedPt<9, 7>>(floatVecA);
+        REQUIRE(floatVecA.x == Approx(float(fixedVecA.x)).epsilon(0.01));
+        REQUIRE(floatVecA.y == Approx(float(fixedVecA.y)).epsilon(0.01));
+        float lenSqValA = dotNorm(floatVecA, floatVecA);
 
-        auto dotNormFixedVal = dotNormFixed(fixedVec, fixedVec);
-        float dotNormFixedTemp = float(dotNormFixedVal);
-        cout << "Calculating dotNorm(v,v) for vec " << floatVec << "  = " << dotNormVal << " --> " << dotNormFixedTemp << endl;
-        REQUIRE(dotNormVal == Approx(float(dotNormFixedVal)).epsilon(0.3));
-        cout << endl;
-    }    
+//        auto dotNormFixedValA = dotNormFixed(fixedVecA, fixedVecA);
+//        cout << "Calculating dotNorm(v,v) for vec " << floatVecA << "  = " << lenSqValA << " --> " << float(dotNormFixedValA) << endl;
+//        REQUIRE(lenSqValA == Approx(float(dotNormFixedValA)).epsilon(0.3));
+
+        for (auto floatVecB : { floatVector3(1,2,3), floatVector3(5,6,7), floatVector3(10,10,12), floatVector3(0.5,0.25,0.1) })
+        {
+            cout << "computing dot between " << floatVecA << " and " << floatVecB << endl;
+            Vector3<FixedPt<9, 7>> fixedVecB = Vector3<FixedPt<9, 7>>(floatVecB);
+            auto dotNormFixedValAB = dotNormFixed(fixedVecA, fixedVecB);
+            REQUIRE(dotNorm(floatVecA, floatVecB) == Approx(float(dotNormFixedValAB)).epsilon(0.3));
+            cout << endl;
+        }
+    }
 }
  

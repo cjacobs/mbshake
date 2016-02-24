@@ -140,7 +140,16 @@ TEST_CASE("fixed_pt")
     }
 }
 
+TEST_CASE("FixedPt fixMul tests")
+{
+    fixed_8_8 a(10);
+    fixed_4_12 b(3);
+    fixed_12_4 c = fixMul<12, 4, int16_t>(a, b);
+    REQUIRE(float(c) == 10 * 3);
 
+    FixedPt<20, 12> c_20_12 = fixMul<20, 12, int32_t>(a, b);
+
+}
 
 TEST_CASE("fixed_pt timing tests")
 {
